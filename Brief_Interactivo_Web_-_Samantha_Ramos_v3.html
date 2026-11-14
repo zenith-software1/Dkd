@@ -1,0 +1,1694 @@
+<!DOCTYPE html>
+<html lang="es" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <title>Brief de Arquitectura Web — Samantha × Zenith Code</title>
+
+    <!-- Google Fonts: Instrument Serif (Editorial), Plus Jakarta Sans (UI) & JetBrains Mono (Índice Técnico) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        serif: ['"Instrument Serif"', 'Georgia', 'serif'],
+                        sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'monospace'],
+                    },
+                    colors: {
+                        editorial: {
+                            paper: '#F4F1EA',
+                            surface: '#FAF8F3',
+                            stone: '#E7E2D6',
+                            border: '#D4CEC0',
+                            ink: '#121212',
+                            muted: '#5A564E',
+                            vermilion: '#D9381E',
+                            vermilionDark: '#B52B14',
+                            forest: '#1F3A33',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Textura sutil tipo papel editorial y reglas tipográficas */
+        body {
+            background-color: #F4F1EA;
+            color: #121212;
+            overflow-x: hidden;
+            background-image: radial-gradient(rgba(18, 18, 18, 0.06) 1px, transparent 0);
+            background-size: 24px 24px;
+        }
+
+        /* Scrollbar minimalista */
+        ::-webkit-scrollbar {
+            width: 7px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #F4F1EA;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #C4BEB0;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #121212;
+        }
+
+        /* Chips y tarjetas seleccionables táctiles */
+        .option-chip {
+            transition: all 0.18s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            user-select: none;
+        }
+        .option-chip:hover {
+            border-color: #121212;
+        }
+        .option-chip[data-selected="true"] {
+            background-color: #121212;
+            border-color: #121212;
+            color: #FAF8F3;
+        }
+        .option-chip[data-selected="true"] .chip-dot {
+            background-color: #D9381E;
+            border-color: #D9381E;
+        }
+        .option-chip[data-selected="true"] .chip-sub {
+            color: #D4CEC0;
+        }
+
+        /* Inputs arquitectónicos */
+        .arch-input {
+            background-color: #FAF8F3;
+            border: 1px solid #C9C2B2;
+            color: #121212;
+            transition: border-color 0.2s ease, background-color 0.2s ease;
+        }
+        .arch-input:focus {
+            outline: none;
+            border-color: #121212;
+            background-color: #FFFFFF;
+            box-shadow: 3px 3px 0px #121212;
+        }
+        .arch-input::placeholder {
+            color: #8C867A;
+        }
+
+        /* Estado de pregunta omitida por el usuario */
+        .question-card {
+            transition: opacity 0.25s ease, background-color 0.25s ease;
+        }
+        .question-card[data-skipped="true"] {
+            opacity: 0.48;
+            background-color: #EAE5D9;
+        }
+        .question-card[data-skipped="true"] .question-body {
+            pointer-events: none;
+            filter: grayscale(1);
+        }
+
+        /* Sliders personalizados de personalidad de marca */
+        input[type="range"].editorial-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 2px;
+            background: #C4BEB0;
+            outline: none;
+        }
+        input[type="range"].editorial-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #D9381E;
+            border: 2px solid #121212;
+            cursor: pointer;
+            transition: transform 0.15s ease;
+        }
+        input[type="range"].editorial-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.18);
+        }
+        input[type="range"].editorial-slider::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #D9381E;
+            border: 2px solid #121212;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body class="font-sans antialiased pb-32">
+
+    <!-- =====================================================================
+         BARRA SUPERIOR DE NAVEGACIÓN Y CONTROL DE LIBERTAD
+    ====================================================================== -->
+    <header class="sticky top-0 z-40 bg-editorial-paper/95 backdrop-blur-md border-b border-editorial-ink/15">
+        <div class="max-w-5xl mx-auto px-4 sm:px-8 py-3 flex items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <span class="w-2.5 h-2.5 rounded-full bg-editorial-vermilion inline-block"></span>
+                <span class="font-mono text-xs font-semibold tracking-wider uppercase text-editorial-ink">Zenith Code</span>
+                <span class="hidden sm:inline font-mono text-[11px] text-editorial-muted">// BRIEFING INTERACTIVO</span>
+            </div>
+
+            <!-- Estado dinámico: preguntas activas y respondidas -->
+            <div class="flex items-center gap-3 sm:gap-5">
+                <div class="text-right font-mono text-[11px]">
+                    <span class="text-editorial-muted hidden sm:inline">ACTIVAS: </span>
+                    <strong id="answeredCounter" class="text-editorial-ink">0</strong>
+                    <span class="text-editorial-muted">/</span>
+                    <span id="activeCounter" class="text-editorial-ink">30</span>
+                </div>
+                <div class="w-20 sm:w-28 h-1.5 bg-editorial-stone overflow-hidden">
+                    <div id="topProgressBar" class="h-full bg-editorial-vermilion transition-all duration-300" style="width: 0%;"></div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- =====================================================================
+         CABECERA EDITORIAL (MASTHEAD)
+    ====================================================================== -->
+    <section class="max-w-5xl mx-auto px-4 sm:px-8 pt-10 sm:pt-14 pb-8">
+        <div class="border-t-2 border-b border-editorial-ink py-8 sm:py-10">
+            <div class="flex flex-wrap items-center justify-between gap-2 font-mono text-[11px] uppercase tracking-widest text-editorial-muted mb-5">
+                <span>DOC. REF: ZC—SAM—2026</span>
+                <span>FORMATO ABIERTO · 100% PERSONALIZABLE</span>
+            </div>
+
+            <h1 class="font-serif text-4xl sm:text-6xl md:text-[64px] leading-[0.98] tracking-tight text-editorial-ink mb-6">
+                Arquitectura &amp; Dirección <span class="italic text-editorial-vermilion">Creativa Web</span>
+            </h1>
+
+            <div class="grid md:grid-cols-12 gap-6 items-end">
+                <div class="md:col-span-8">
+                    <p class="text-sm sm:text-base text-editorial-muted leading-relaxed">
+                        Hola <strong class="text-editorial-ink">Samantha</strong>. Este documento no es un formulario rígido: tú tienes el control total. Puedes responder solo lo que te haga sentido, <strong class="text-editorial-ink">omitir</strong> cualquier punto que no aplique a tu proyecto, escribir con total libertad o <strong class="text-editorial-ink">agregar tus propias preguntas e ideas</strong> en cada sección.
+                    </p>
+                </div>
+                <div class="md:col-span-4 flex flex-wrap md:justify-end gap-2">
+                    <button type="button" id="modeAllBtn" class="px-3 py-1.5 font-mono text-[11px] uppercase border border-editorial-ink bg-editorial-ink text-editorial-surface transition">
+                        Ver Todo
+                    </button>
+                    <button type="button" id="modeEssentialBtn" class="px-3 py-1.5 font-mono text-[11px] uppercase border border-editorial-ink/30 hover:border-editorial-ink text-editorial-ink transition">
+                        Modo Esencial
+                    </button>
+                </div>
+            </div>
+
+            <!-- Índice rápido de módulos -->
+            <nav aria-label="Módulos del brief" class="mt-8 pt-5 border-t border-editorial-border flex flex-wrap gap-x-5 gap-y-2 font-mono text-xs">
+                <a href="#sec-1" class="hover:text-editorial-vermilion transition"><span class="text-editorial-vermilion">01.</span> Visión &amp; Naturaleza</a>
+                <a href="#sec-2" class="hover:text-editorial-vermilion transition"><span class="text-editorial-vermilion">02.</span> Estética &amp; Atmósfera</a>
+                <a href="#sec-3" class="hover:text-editorial-vermilion transition"><span class="text-editorial-vermilion">03.</span> Estructura &amp; Contenido</a>
+                <a href="#sec-4" class="hover:text-editorial-vermilion transition"><span class="text-editorial-vermilion">04.</span> Oferta &amp; Modelo</a>
+                <a href="#sec-5" class="hover:text-editorial-vermilion transition"><span class="text-editorial-vermilion">05.</span> Técnico &amp; Carta Blanca</a>
+            </nav>
+        </div>
+    </section>
+
+    <!-- =====================================================================
+         CUERPO DEL BRIEF INTERACTIVO (5 MÓDULOS + PREGUNTAS LIBRES)
+    ====================================================================== -->
+    <main class="max-w-5xl mx-auto px-4 sm:px-8 space-y-12" id="briefMain">
+
+        <!-- =================================================================
+             MÓDULO 01: NATURALEZA DEL PROYECTO & VISIÓN (01 - 06)
+        ================================================================== -->
+        <section id="sec-1" class="scroll-mt-20">
+            <div class="flex flex-col sm:flex-row sm:items-end justify-between border-b-2 border-editorial-ink pb-3 mb-6 gap-2">
+                <div>
+                    <span class="font-mono text-xs uppercase tracking-widest text-editorial-vermilion block">Módulo // 01</span>
+                    <h2 class="font-serif text-3xl sm:text-4xl text-editorial-ink">Naturaleza del Proyecto &amp; Visión</h2>
+                </div>
+                <span class="font-mono text-xs text-editorial-muted">Define qué vamos a construir realmente</span>
+            </div>
+
+            <div class="module-progress flex items-center gap-3 mb-5 font-mono text-xs uppercase tracking-wider text-editorial-muted" data-progress-module="01"><span class="mp-text whitespace-nowrap">0 / 0 listos</span><div class="flex-1 h-1 bg-editorial-stone overflow-hidden"><div class="mp-bar h-full bg-editorial-forest transition-all duration-300" style="width:0%;"></div></div></div>
+            <div class="space-y-5 module-questions" data-module="01">
+                <!-- P01 -->
+                <article class="question-card bg-editorial-surface border border-editorial-border p-5 sm:p-7" data-qid="01" data-essential="true" data-qtype="multi-custom" data-qtitle="¿Qué tipo de proyecto es esta página web?">
+                    <div class="flex items-start justify-between gap-4 mb-3">
+                        <span class="font-mono text-xs font-semibold text-editorial-vermilion">[01] · ESENCIAL</span>
+                        <button type="button" class="toggle-skip-btn font-mono text-xs uppercase px-3 py-2.5 min-h-[44px] inline-flex items-center border border-editorial-border hover:border-editorial-ink text-editorial-muted hover:text-editorial-ink transition">
+                            Omitir punto
+                        </button>
+                    </div>
+                    <div class="question-body">
+                        <h3 class="text-base sm:text-lg font-bold text-editorial-ink mb-1">¿Cuál es la esencia real de este proyecto?</h3>
+                        <p class="text-sm text-editorial-muted mb-4">No tiene que encasillarse en una sola cosa. Marca las facetas que convivirán en tu web o escribe la tuya:</p>
+                        
+                        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-2.5 mb-3">
+                            <button type="button" class="option-chip text-left p-3.5 border border-editorial-border bg-editorial-paper text-xs" data-value="Marca Personal & Trayectoria">
+                                <div class="flex items-center gap-2 font-semibold mb-0.5"><span class="chip-dot w-2 h-2 rounded-full border border-current"></span> Marca Personal</div>
+                                <span class="chip-sub text-xs text-editorial-muted block">Tu nombre, identidad y proyección profesional.</span>
+                            </button>
+                            <button type="button" class="option-chip text-left p-3.5 border border-editorial-border bg-editorial-paper text-xs" data-value="Proyecto Artístico / Musical">
+                                <div class="flex items-center gap-2 font-semibold mb-0.5"><span class="chip-dot w-2 h-2 rounded-full border border-current"></span> Proyecto Artístico</div>
+                                <span class="chip-sub text-xs text-editorial-muted block">Shows, lanzamientos, videos y contrataciones.</span>
+                            </button>
+                            <button type="button" class="option-chip text-left p-3.5 border border-editorial-border bg-editorial-paper text-xs" data-value="Academia / Mentorías / Clases">
+                                <div class="flex items-center gap-2 font-semibold mb-0.5"><span class="chip-dot w-2 h-2 rounded-full border border-current"></span> Educación / Mentorías</div>
+                                <span class="chip-sub text-xs text-editorial-muted block">Clases, talleres, formación o coaching.</span>
+                            </button>
+                            <button type="button" class="option-chip text-left p-3.5 border border-editorial-border bg-editorial-paper text-xs" data-value="Estudio Creativo / Producción">
+                                <div class="flex items-center gap-2 font-semibold mb-0.5"><span class="chip-dot w-2 h-2 rounded-full border border-current"></span> Estudio / Producción</div>
+                                <span class="chip-sub text-xs text-editorial-muted block">Servicios de grabación, dirección o producción.</span>
+                            </button>
+                            <button type="button" class="option-chip text-left p-3.5 border border-editorial-border bg-editorial-paper text-xs" data-value="Portafolio & Press Kit">
+                                <div class="flex items-center gap-2 font-semibold mb-0.5"><span class="chip-dot w-2 h-2 rounded-full border border-current"></span> Portafolio / Press Kit</div>
+                                <span class="chip-sub text-xs text-editorial-muted block">Carta de presentación para clientes o medios.</span>
+                            </button>
+                            <button type="button" class="option-chip text-left p-3.5 border border-editorial-border bg-editorial-paper text-xs" data-value="Emprendimiento / Concepto Nuevo">
+                                <div class="flex items-center gap-2 font-semibold mb-0.5"><span class="chip-dot w-2 h-2 rounded-full border border-current"></span> Concepto / Marca Nueva</div>
+                                <span class="chip-sub text-xs text-editorial-muted block">Un proyecto distinto que estás lanzando.</span>
+                            </button>
+                        </div>
+
+                        <input type="text" class="arch-input custom-extra-input w-full px-3.5 py-2.5 text-xs sm:text-sm" placeholder="O descríbelo con tus propias palabras aquí...">
+                    </div>
+                </article>
+
+                <!-- P02 -->
+                <article class="question-card bg-editorial-surface border border-editorial-border p-5 sm:p-7" data-qid="02" data-essential="true" data-qtype="text" data-qtitle="Nombre oficial del proyecto o marca">
+                    <div class="flex items-start justify-between gap-4 mb-3">
+                        <span class="font-mono text-xs font-semibold text-editorial-vermilion">[02] · ESENCIAL</span>
+                        <button type="button" class="toggle-skip-btn font-mono text-xs uppercase px-3 py-2.5 min-h-[44px] inline-flex items-center border border-editorial-border hover:border-editorial-ink text-editorial-muted hover:text-editorial-ink transition">Omitir punto</button>
+                    </div>
+                    <div class="question-body">
+                        <label for="in-02" class="block text-base sm:text-lg font-bold text-editorial-ink mb-1">Nombre exacto que llevará la marca o proyecto en la portada</label>
+                        <p class="text-sm text-editorial-muted mb-3">Puede ser tu nombre propio, un seudónimo artístico, el nombre de un estudio o una combinación.</p>
+                        <input type="text" id="in-02" class="arch-input w-full px-4 py-3 text-sm" placeholder="Escribe el nombre tal como quieres verlo publicado...">
+                    </div>
+                </article>
+
+                <!-- P03 -->
+                <article class="question-card bg-editorial-surface border border-editorial-border p-5 sm:p-7" data-qid="03" data-essential="true" data-qtype="textarea" data-qtitle="Propósito y meta principal de la web">
+                    <div class="flex items-start justify-between gap-4 mb-3">
+                        <span class="font-mono text-xs font-semibold text-editorial-vermilion">[03] · ESENCIAL</span>
+                        <button type="button" class="toggle-skip-btn font-mono text-xs uppercase px-3 py-2.5 min-h-[44px] inline-flex items-center border border-editorial-border hover:border-editorial-ink text-editorial-muted hover:text-editorial-ink transition">Omitir punto</button>
+                    </div>
+                    <div class="question-body">
+                        <label for="in-03" class="block text-base sm:text-lg font-bold text-editorial-ink mb-1">¿Para qué quieres esta página hoy? ¿Qué puerta te gustaría que te abra?</label>
+                        <p class="text-sm text-editorial-muted mb-3">Ej. Dejar de depender de plataformas con comisiones, verse más profesional ante clientes, centralizar todo en un solo link, vender paquetes, etc.</p>
+                        <textarea id="in-03" rows="3" class="arch-input w-full px-4 py-3 text-sm" placeholder="Cuéntame con total confianza qué esperas lograr con este sitio..."></textarea>
+                    </div>
+                </article>
+
+                <!-- P04 -->
+                <article class="question-card bg-editorial-surface border border-editorial-border p-5 sm:p-7" data-qid="04" data-essential="false" data-qtype="text" data-qtitle="Titular o frase de impacto en la portada">
+                    <div class="flex items-start justify-between gap-4 mb-3">
+                        <span class="font-mono text-xs font-semibold text-editorial-muted">[04] · COPYWRITING</span>
+                        <button type="button" class="toggle-skip-btn font-mono text-xs uppercase px-3 py-2.5 min-h-[44px] inline-flex items-center border border-editorial-border hover:border-editorial-ink text-editorial-muted hover:text-editorial-ink transition">Omitir punto</button>
+                    </div>
+                    <div class="question-body">
+                        <label for="in-04" class="block text-base sm:text-lg font-bold text-editorial-ink mb-1">¿Tienes alguna frase, lema o titular pensado para abrir la página?</label>
+                        <p class="text-sm text-editorial-muted mb-3">Si aún no la tienes, déjalo en blanco o escribe una idea suelta y nosotros redactamos 3 propuestas.</p>
+                        <input type="text" id="in-04" class="arch-input w-full px-4 py-3 text-sm" placeholder="Opcional: escribe tu frase o idea principal...">
+                    </div>
+                </article>
+
+                <!-- P05 -->
+                <article class="question-card bg-editorial-surface border border-editorial-border p-5 sm:p-7" data-qid="05" data-essential="true" data-qtype="single-custom" data-qtitle="Acción principal que debe hacer el visitante">
+                    <div class="flex items-start justify-between gap-4 mb-3">
+                        <span class="font-mono text-xs font-semibold text-editorial-vermilion">[05] · ESENCIAL</span>
+                        <button type="button" class="toggle-skip-btn font-mono text-xs uppercase px-3 py-2.5 min-h-[44px] inline-flex items-center border border-editorial-border hover:border-editorial-ink text-editorial-muted hover:text-editorial-ink transition">Omitir punto</button>
+                    </div>
+                    <div class="question-body">
+                        <h3 class="text-base sm:text-lg font-bold text-editorial-ink mb-1">Cuando alguien entre a tu web, ¿qué es lo #1 que quieres que haga?</h3>
+                        <div class="grid sm:grid-cols-2 gap-2.5 mt-3 mb-3">
+                            <button type="button" class="option-chip text-left p-3 border border-editorial-border bg-editorial-paper text-xs" data-value="Escribirme directo por WhatsApp">
+                                <span class="chip-dot w-2 h-2 rounded-full border border-current inline-block mr-2"></span> Escribirme directo por WhatsApp
+                            </button>
+                            <button type="button" class="option-chip text-left p-3 border border-editorial-border bg-editorial-paper text-xs" data-value="Agendar una sesión / clase / llamada">
+                                <span class="chip-dot w-2 h-2 rounded-full border border-current inline-block mr-2"></span> Agendar una sesión, clase o llamada
+                            </button>
+                            <button type="button" class="option-chip text-left p-3 border border-editorial-border bg-editorial-paper text-xs" data-value="Ver / Escuchar mi portafolio y trayectoria">
+                                <span class="chip-dot w-2 h-2 rounded-full border border-current inline-block mr-2"></span> Ver / escuchar mi trabajo y trayectoria
+                            </button>
+                            <button type="button" class="option-chip text-left p-3 border border-editorial-border bg-editorial-paper text-xs" data-value="Solicitar cotización o contratar un servicio">
+                                <span class="chip-dot w-2 h-2 rounded-full border border-current inline-block mr-2"></span> Pedir cotización o contratarme
+                            </button>
+                        </div>
+                        <input type="text" class="arch-input custom-extra-input w-full px-3.5 py-2.5 text-xs" placeholder="Otra acción específica...">
+                    </div>
+                </article>
+
+                <!-- P06 -->
+                <article class="question-card bg-editorial-surface border border-editorial-border p-5 sm:p-7" data-qid="06" data-essential="false" data-qtype="single-custom" data-qtitle="Idioma y alcance del sitio">
+                    <div class="flex items-start justify-between gap-4 mb-3">
+                        <span class="font-mono text-xs font-semibold text-editorial-muted">[06] · ALCANCE</span>
+                        <button type="button" class="toggle-skip-btn font-mono text-xs uppercase px-3 py-2.5 min-h-[44px] inline-flex items-center border border-editorial-border hover:border-editorial-ink text-editorial-muted hover:text-editorial-ink transition">Omitir punto</button>
+                    </div>
+                    <div class="question-body">
+                        <h3 class="text-base sm:text-lg font-bold text-editorial-ink mb-3">Idiomas en los que debe funcionar la web</h3>
+                        <div class="flex flex-wrap gap-2">
+                            <button type="button" class="option-chip px-4 py-2.5 border border-editorial-border bg-editorial-paper text-xs" data-value="Solo Español">Solo Español</button>
+                            <button type="button" class="option-chip px-4 py-2.5 border border-editorial-border bg-editorial-paper text-xs" data-value="Bilingüe (Español + Inglés)">Bilingüe (Español + Inglés)</button>
+                            <button type="button" class="option-chip px-4 py-2.5 border border-editorial-border bg-editorial-paper text-xs" data-value="Solo Inglés">Solo Inglés</button>
+                        </div>
+                    </div>
+                </article>
+                <!-- P27 -->
+                <article class="question-card bg-editorial-surface border border-editorial-border p-5 sm:p-7" data-qid="27" data-essential="true" data-qtype="multi-custom" data-qtitle="¿Quién va a visitar tu web?">
+                    <div class="flex items-start justify-between gap-4 mb-3">
+                        <span class="font-mono text-xs font-semibold text-editorial-vermilion">[27] · PÚBLICO</span>
+                        <button type="button" class="toggle-skip-btn font-mono text-xs uppercase px-3 py-2.5 min-h-[44px] inline-flex items-center border border-editorial-border hover:border-editorial-ink text-editorial-muted hover:text-editorial-ink transition">Omitir punto</button>
+                    </div>
+                    <div class="question-body">
+                        <h3 class="text-base sm:text-lg font-bold text-editorial-ink mb-1">¿Quién va a visitar tu web?</h3>
+                        <p class="text-sm text-editorial-muted mb-3">Marca las personas que más te interesa atraer. Esto define el tono y el orden de las secciones.</p>
+                        <div class="flex flex-wrap gap-2 mb-3">
+                            <button type="button" class="option-chip px-4 py-2.5 border border-editorial-border bg-editorial-paper text-xs" data-value="Promotores y booking">Promotores y booking</button>
+                            <button type="button" class="option-chip px-4 py-2.5 border border-editorial-border bg-editorial-paper text-xs" data-value="Fans y público">Fans y público</button>
+                            <button type="button" class="option-chip px-4 py-2.5 border border-editorial-border bg-editorial-paper text-xs" data-value="Alumnos o clientes">Alumnos o clientes</button>
+                            <button type="button" class="option-chip px-4 py-2.5 border border-editorial-border bg-editorial-paper text-xs" data-value="Medios y prensa">Medios y prensa</button>
+                            <button type="button" class="option-chip px-4 py-2.5 border border-editorial-border bg-editorial-paper text-xs" data-value="Marcas y colaboraciones">Marcas y colaboraciones</button>
+                        </div>
+                        <input type="text" class="arch-input custom-extra-input w-full px-3.5 py-2.5 text-xs sm:text-sm" placeholder="Otro público que quieras atraer...">
+                    </div>
+                </article>
+
+                <!-- P28 -->
+                <article class="question-card bg-editorial-surface border border-editorial-border p-5 sm:p-7" data-qid="28" data-essential="false" data-qtype="multi-custom" data-qtitle="¿De dónde van a llegar las personas?">
+                    <div class="flex items-start justify-between gap-4 mb-3">
+                        <span class="font-mono text-xs font-semibold text-editorial-muted">[28] · TRÁFICO</span>
+                        <button type="button" class="toggle-skip-btn font-mono text-xs uppercase px-3 py-2.5 min-h-[44px] inline-flex items-center border border-editorial-border hover:border-editorial-ink text-editorial-muted hover:text-editorial-ink transition">Omitir punto</button>
+                    </div>
+                    <div class="question-body">
+                        <h3 class="text-base sm:text-lg font-bold text-editorial-ink mb-1">¿De dónde van a llegar las personas?</h3>
+                        <p class="text-sm text-editorial-muted mb-3">Por dónde te van a encontrar hace una gran diferencia en cómo se diseña la portada.</p>
+                        <div class="flex flex-wrap gap-2 mb-3">
+                            <button type="button" class="option-chip px-4 py-2.5 border border-editorial-border bg-editorial-paper text-xs" data-value="Instagram">Instagram</button>
+                            <button type="button" class="option-chip px-4 py-2.5 border border-editorial-border bg-editorial-paper text-xs" data-value="TikTok">TikTok</button>
+                            <button type="button" class="option-chip px-4 py-2.5 border border-editorial-border bg-editorial-paper text-xs" data-value="YouTube">YouTube</button>
+                            <button type="button" class="option-chip px-4 py-2.5 border border-editorial-border bg-editorial-paper text-xs" data-value="Google">Google</button>
+                            <button type="button" class="option-chip px-4 py-2.5 border border-editorial-border bg-editorial-paper text-xs" data-value="Eventos o código QR">Eventos o código QR</button>
+                            <button type="button" class="option-chip px-4 py-2.5 border border-editorial-border bg-editorial-paper text-xs" data-value="WhatsApp o recomendación">WhatsApp o recomendación</button>
+                        </div>
+                        <input type="text" class="arch-input custom-extra-input w-full px-3.5 py-2.5 text-xs sm:text-sm" placeholder="Otra fuente de tráfico...">
+                    </div>
+                </article>
+
+                <!-- P29 -->
+                <article class="question-card bg-editorial-surface border border-editorial-border p-5 sm:p-7" data-qid="29" data-essential="true" data-qtype="multi-custom" data-qtitle="¿Cómo sabrás que la web está funcionando?">
+                    <div class="flex items-start justify-between gap-4 mb-3">
+                        <span class="font-mono text-xs font-semibold text-editorial-vermilion">[29] · ÉXITO</span>
+                        <button type="button" class="toggle-skip-btn font-mono text-xs uppercase px-3 py-2.5 min-h-[44px] inline-flex items-center border border-editorial-border hover:border-editorial-ink text-editorial-muted hover:text-editorial-ink transition">Omitir punto</button>
+                    </div>
+                    <div class="question-body">
+                        <h3 class="text-base sm:text-lg font-bold text-editorial-ink mb-1">¿Cómo sabrás que la web está funcionando?</h3>
+                        <p class="text-sm text-editorial-muted mb-3">Elige lo que consideres un buen resultado. Así sabremos qué medir desde el inicio.</p>
+                        <div class="flex flex-wrap gap-2 mb-3">
+                            <button type="button" class="option-chip px-4 py-2.5 border border-editorial-border bg-editorial-paper text-xs" data-value="Más solicitudes de cotización">Más solicitudes de cotización</button>
+                            <button type="button" class="option-chip px-4 py-2.5 border border-editorial-border bg-editorial-paper text-xs" data-value="Más reservas o inscripciones">Más reservas o inscripciones</button>
+                            <button type="button" class="option-chip px-4 py-2.5 border border-editorial-border bg-editorial-paper text-xs" data-value="Más seguidores o alcance">Más seguidores o alcance</button>
+                            <button type="button" class="option-chip px-4 py-2.5 border border-editorial-border bg-editorial-paper text-xs" data-value="Más mensajes por WhatsApp">Más mensajes por WhatsApp</button>
+                            <button type="button" class="option-chip px-4 py-2.5 border border-editorial-border bg-editorial-paper text-xs" data-value="Verme profesional me basta">Verme profesional me basta</button>
+                        </div>
+                        <input type="text" class="arch-input custom-extra-input w-full px-3.5 py-2.5 text-xs sm:text-sm" placeholder="Otro resultado que esperas...">
+                    </div>
+                </article>
+
+            </div>
+
+            <!-- Botón para agregar pregunta propia en Módulo 01 -->
+            <div class="mt-4">
+                <button type="button" class="add-custom-question-btn font-mono text-xs uppercase tracking-wider px-4 py-2.5 border border-dashed border-editorial-ink/50 hover:border-editorial-ink hover:bg-editorial-surface text-editorial-ink transition flex items-center gap-2" data-target-module="01">
+                    <span>+ Agregar pregunta o nota libre en este módulo</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- =================================================================
+             MÓDULO 02: ESTÉTICA, DIRECCIÓN DE ARTE & PERSONALIDAD (07 - 12)
+        ================================================================== -->
+        <section id="sec-2" class="scroll-mt-20">
+            <div class="flex flex-col sm:flex-row sm:items-end justify-between border-b-2 border-editorial-ink pb-3 mb-6 gap-2">
+                <div>
+                    <span class="font-mono text-xs uppercase tracking-widest text-editorial-vermilion block">Módulo // 02</span>
+                    <h2 class="font-serif text-3xl sm:text-4xl text-editorial-ink">Estética, Dirección de Arte &amp; Atmósfera</h2>
+                </div>
+                <span class="font-mono text-xs text-editorial-muted">Aquí defines el estilo visual real (cero plantillas genéricas)</span>
+            </div>
+
+            <div id="livePreview" class="mb-6 border border-editorial-ink transition-colors duration-500" style="background:#F4F1EA;color:#121212;--pv-accent:#D9381E;">
+                <div class="flex justify-between items-center gap-3 px-4 py-2.5 border-b font-mono text-xs uppercase tracking-widest" style="border-color:currentColor;">
+                    <span>Vista previa en vivo</span><span id="pvPalette">Papel Alabastro</span>
+                </div>
+                <div class="px-5 sm:px-10 py-10 sm:py-14">
+                    <p id="pvBrand" class="font-mono text-xs uppercase tracking-widest mb-4" style="color:var(--pv-accent);">Tu nombre</p>
+                    <h4 id="pvTitle" class="font-serif leading-[0.98] break-words" style="font-size:44px;">Tu titular aparecerá aquí</h4>
+                    <span id="pvBtn" class="inline-block mt-7 px-5 py-2.5 font-mono text-xs uppercase" style="background:var(--pv-accent);color:#F4F1EA;">Pedir cotización</span>
+                </div>
+            </div>
+            <div class="module-progress flex items-center gap-3 mb-5 font-mono text-xs uppercase tracking-wider text-editorial-muted" data-progress-module="02"><span class="mp-text whitespace-nowrap">0 / 0 listos</span><div class="flex-1 h-1 bg-editorial-stone overflow-hidden"><div class="mp-bar h-full bg-editorial-forest transition-all duration-300" style="width:0%;"></div></div></div>
+            <div class="space-y-5 module-questions" data-module="02">
+                <!-- P07: Sliders de Personalidad -->
+                <article class="question-card bg-editorial-surface border border-editorial-border p-5 sm:p-7" data-qid="07" data-essential="true" data-qtype="sliders" data-qtitle="Ecualizador de Personalidad Visual">
+                    <div class="flex items-start justify-between gap-4 mb-3">
+                        <span class="font-mono text-xs font-semibold text-editorial-vermilion">[07] · ESENCIAL</span>
+                        <button type="button" class="toggle-skip-btn font-mono text-xs uppercase px-3 py-2.5 min-h-[44px] inline-flex items-center border border-editorial-border hover:border-editorial-ink text-editorial-muted hover:text-editorial-ink transition">Omitir punto</button>
+                    </div>
+                    <div class="question-body">
+                        <h3 class="text-base sm:text-lg font-bold text-editorial-ink mb-1">Ecualizador de Personalidad Visual</h3>
+                        <p class="text-sm text-editorial-muted mb-5">Mueve cada deslizador hacia el extremo que más te represente:</p>
+
+                        <div class="space-y-5">
+                            <div>
+                                <div class="flex justify-between font-mono text-xs mb-1.5">
+                                    <span>Minimalista &amp; Silencioso</span>
+                                    <span class="text-editorial-vermilion font-semibold" id="sl-val-1">50%</span>
+                                    <span>Expresivo &amp; Cinematográfico</span>
+                                </div>
+                                <input type="range" min="0" max="100" value="50" class="editorial-slider" data-slider-name="Minimalista vs Expresivo" data-display="sl-val-1">
+                            </div>
+
+                            <div>
+                                <div class="flex justify-between font-mono text-xs mb-1.5">
+                                    <span>Editorial / Clásico Atemporal</span>
+                                    <span class="text-editorial-vermilion font-semibold" id="sl-val-2">50%</span>
+                                    <span>Vanguardista / Experimental</span>
+                                </div>
+                                <input type="range" min="0" max="100" value="50" class="editorial-slider" data-slider-name="Editorial Clásico vs Vanguardista" data-display="sl-val-2">
+                            </div>
+
+                            <div>
+                                <div class="flex justify-between font-mono text-xs mb-1.5">
+                                    <span>Cálido, Íntimo &amp; Cercano</span>
+                                    <span class="text-editorial-vermilion font-semibold" id="sl-val-3">50%</span>
+                                    <span>Sobrio, Exclusivo &amp; De Autor</span>
+                                </div>
+                                <input type="range" min="0" max="100" value="50" class="editorial-slider" data-slider-name="Cálido Cercano vs Sobrio Exclusivo" data-display="sl-val-3">
+                            </div>
+
+                            <div>
+                                <div class="flex justify-between font-mono text-xs mb-1.5">
+                                    <span>Luminoso / Tonos Claros</span>
+                                    <span class="text-editorial-vermilion font-semibold" id="sl-val-4">50%</span>
+                                    <span>Nocturno / Tonos Profundos</span>
+                                </div>
+                                <input type="range" min="0" max="100" value="50" class="editorial-slider" data-slider-name="Luminoso vs Nocturno" data-display="sl-val-4">
+                            </div>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- P08: Paletas curadas + Color libre -->
+                <article class="question-card bg-editorial-surface border border-editorial-border p-5 sm:p-7" data-qid="08" data-essential="true" data-qtype="single-custom" data-qtitle="Dirección cromática y colores">
+                    <div class="flex items-start justify-between gap-4 mb-3">
+                        <span class="font-mono text-xs font-semibold text-editorial-vermilion">[08] · ESENCIAL</span>
+                        <button type="button" class="toggle-skip-btn font-mono text-xs uppercase px-3 py-2.5 min-h-[44px] inline-flex items-center border border-editorial-border hover:border-editorial-ink text-editorial-muted hover:text-editorial-ink transition">Omitir punto</button>
+                    </div>
+                    <div class="question-body">
+                        <h3 class="text-base sm:text-lg font-bold text-editorial-ink mb-1">Universo de Color (elige una atmósfera o arma la tuya)</h3>
+                        <p class="text-sm text-editorial-muted mb-4">Propuestas de dirección de arte fuera de lo común:</p>
+
+                        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
+                            <button type="button" class="option-chip text-left p-3.5 border border-editorial-border bg-editorial-paper" data-value="Papel Alabastro, Tinta Negra y Terracota">
+                                <div class="flex gap-1.5 mb-2">
+                                    <span class="w-5 h-5 border border-black/20 bg-[#F4F1EA]"></span>
+                                    <span class="w-5 h-5 bg-[#121212]"></span>
+                                    <span class="w-5 h-5 bg-[#D9381E]"></span>
+                                </div>
+                                <div class="text-xs font-bold">01. Editorial Alabastro</div>
+                                <span class="chip-sub text-xs text-editorial-muted block">Papel crema, tinta negra y acento terracota.</span>
+                            </button>
+
+                            <button type="button" class="option-chip text-left p-3.5 border border-editorial-border bg-editorial-paper" data-value="Monolito Obsidiana, Arena y Plata">
+                                <div class="flex gap-1.5 mb-2">
+                                    <span class="w-5 h-5 bg-[#0E0E0E]"></span>
+                                    <span class="w-5 h-5 bg-[#E6DFD3]"></span>
+                                    <span class="w-5 h-5 bg-[#8E8B82]"></span>
+                                </div>
+                                <div class="text-xs font-bold">02. Monolito Obsidiana</div>
+                                <span class="chip-sub text-xs text-editorial-muted block">Negro mate profundo, arena cálida y plata.</span>
+                            </button>
+
+                            <button type="button" class="option-chip text-left p-3.5 border border-editorial-border bg-editorial-paper" data-value="Verde Bosque Profundo, Marfil y Cobre">
+                                <div class="flex gap-1.5 mb-2">
+                                    <span class="w-5 h-5 bg-[#182C25]"></span>
+                                    <span class="w-5 h-5 border border-black/20 bg-[#F7F4EC]"></span>
+                                    <span class="w-5 h-5 bg-[#B86B43]"></span>
+                                </div>
+                                <div class="text-xs font-bold">03. Bosque &amp; Cobre</div>
+                                <span class="chip-sub text-xs text-editorial-muted block">Orgánico, sofisticado y cálido.</span>
+                            </button>
+
+                            <button type="button" class="option-chip text-left p-3.5 border border-editorial-border bg-editorial-paper" data-value="Burdeos / Vino Tinto, Hueso y Carbón">
+                                <div class="flex gap-1.5 mb-2">
+                                    <span class="w-5 h-5 bg-[#4A151B]"></span>
+                                    <span class="w-5 h-5 border border-black/20 bg-[#F5F0EB]"></span>
+                                    <span class="w-5 h-5 bg-[#1C1917]"></span>
+                                </div>
+                                <div class="text-xs font-bold">04. Burdeos &amp; Hueso</div>
+                                <span class="chip-sub text-xs text-editorial-muted block">Dramático, artístico y con mucha presencia.</span>
+                            </button>
+
+                            <button type="button" class="option-chip text-left p-3.5 border border-editorial-border bg-editorial-paper" data-value="Blanco Galería, Gris Piedra y Azul Cobalto">
+                                <div class="flex gap-1.5 mb-2">
+                                    <span class="w-5 h-5 border border-black/20 bg-[#FAFAFA]"></span>
+                                    <span class="w-5 h-5 bg-[#27272A]"></span>
+                                    <span class="w-5 h-5 bg-[#1D4ED8]"></span>
+                                </div>
+                                <div class="text-xs font-bold">05. Galería Cobalto</div>
+                                <span class="chip-sub text-xs text-editorial-muted block">Contemporáneo, limpio y con acento eléctrico.</span>
+                            </button>
+
+                            <button type="button" class="option-chip text-left p-3.5 border border-editorial-border bg-editorial-paper" data-value="Paleta personalizada (ver descripción)">
+                                <div class="flex gap-1.5 mb-2 items-center">
+                                    <input type="color" id="customColorPicker" value="#D9381E" class="w-6 h-5 border-0 p-0 bg-transparent cursor-pointer" title="Elige tu color favorito">
+                                    <span class="font-mono text-[10px] text-editorial-muted">Toca el cuadro</span>
+                                </div>
+                                <div class="text-xs font-bold">06. Color Libre Propio</div>
+                                <span class="chip-sub text-xs text-editorial-muted block">Elige tu tono exacto o descríbelo abajo.</span>
+                            </button>
+                        </div>
+
+                        <input type="text" id="colorNotesInput" class="arch-input custom-extra-input w-full px-3.5 py-2.5 text-xs" placeholder="Describe los colores exactos que tienes en mente o qué sensación buscas...">
+                    </div>
+                </article>
+
+                <!-- P09 -->
+                <article class="question-card bg-editorial-surface border border-editorial-border p-5 sm:p-7" data-qid="09" data-essential="false" data-qtype="textarea" data-qtitle="Referencias de páginas, marcas o artistas que admiras">
+                    <div class="flex items-start justify-between gap-4 mb-3">
+                        <span class="font-mono text-xs font-semibold text-editorial-muted">[09] · INSPIRACIÓN</span>
+                        <button type="button" class="toggle-skip-btn font-mono text-xs uppercase px-3 py-2.5 min-h-[44px] inline-flex items-center border border-editorial-border hover:border-editorial-ink text-editorial-muted hover:text-editorial-ink transition">Omitir punto</button>
+                    </div>
+                    <div class="question-body">
+                        <label for="in-09" class="block text-base sm:text-lg font-bold text-editorial-ink mb-1">Referencias visuales (websites, cuentas de Instagram, revistas o artistas)</label>
+                        <p class="text-sm text-editorial-muted mb-3">Pega links o nombres y dime qué te atrae de ellos (ej. "me gusta cómo acomodan sus fotos", "me gusta la letra grande", etc.).</p>
+                        <textarea id="in-09" rows="2" class="arch-input w-full px-4 py-3 text-sm" placeholder="Escribe o pega tus referencias aquí..."></textarea>
+                    </div>
+                </article>
+
+                <!-- P10 -->
+                <article class="question-card bg-editorial-surface border border-editorial-border p-5 sm:p-7" data-qid="10" data-essential="false" data-qtype="text" data-qtitle="Lo que NO quieres ver en tu web">
+                    <div class="flex items-start justify-between gap-4 mb-3">
+                        <span class="font-mono text-xs font-semibold text-editorial-muted">[10] · LÍMITES VISUALES</span>
+                        <button type="button" class="toggle-skip-btn font-mono text-xs uppercase px-3 py-2.5 min-h-[44px] inline-flex items-center border border-editorial-border hover:border-editorial-ink text-editorial-muted hover:text-editorial-ink transition">Omitir punto</button>
+                    </div>
+                    <div class="question-body">
+                        <label for="in-10" class="block text-base sm:text-lg font-bold text-editorial-ink mb-1">¿Qué estilos, colores o recursos visuales NO te gustan para nada?</label>
+                        <input type="text" id="in-10" class="arch-input w-full px-4 py-3 text-sm" placeholder="Ej. Que parezca plantilla barata, colores pastel, exceso de texto, cosas muy corporativas...">
+                    </div>
+                </article>
+
+                <!-- P11 -->
+                <article class="question-card bg-editorial-surface border border-editorial-border p-5 sm:p-7" data-qid="11" data-essential="false" data-qtype="single-custom" data-qtitle="Logotipo / Identidad Gráfica actual">
+                    <div class="flex items-start justify-between gap-4 mb-3">
+                        <span class="font-mono text-xs font-semibold text-editorial-muted">[11] · IDENTIDAD</span>
+                        <button type="button" class="toggle-skip-btn font-mono text-xs uppercase px-3 py-2.5 min-h-[44px] inline-flex items-center border border-editorial-border hover:border-editorial-ink text-editorial-muted hover:text-editorial-ink transition">Omitir punto</button>
+                    </div>
+                    <div class="question-body">
+                        <h3 class="text-base sm:text-lg font-bold text-editorial-ink mb-3">¿Ya tienes logotipo o monograma, o lo diseñamos junto con la web?</h3>
+                        <div class="flex flex-wrap gap-2">
+                            <button type="button" class="option-chip px-4 py-2.5 border border-editorial-border bg-editorial-paper text-xs" data-value="Ya tengo logotipo listo">Ya tengo logotipo listo</button>
+                            <button type="button" class="option-chip px-4 py-2.5 border border-editorial-border bg-editorial-paper text-xs" data-value="Crear firma tipográfica / monograma editorial">Crear firma tipográfica / monograma</button>
+                            <button type="button" class="option-chip px-4 py-2.5 border border-editorial-border bg-editorial-paper text-xs" data-value="Tengo un boceto para pulir">Tengo un boceto para pulir</button>
+                        </div>
+                    </div>
+                </article>
+            </div>
+
+            <div class="mt-4">
+                <button type="button" class="add-custom-question-btn font-mono text-xs uppercase tracking-wider px-4 py-2.5 border border-dashed border-editorial-ink/50 hover:border-editorial-ink hover:bg-editorial-surface text-editorial-ink transition flex items-center gap-2" data-target-module="02">
+                    <span>+ Agregar pregunta o idea estética en este módulo</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- =================================================================
+             MÓDULO 03: ESTRUCTURA, SECCIONES & CONTENIDO LIBRE (12 - 17)
+        ================================================================== -->
+        <section id="sec-3" class="scroll-mt-20">
+            <div class="flex flex-col sm:flex-row sm:items-end justify-between border-b-2 border-editorial-ink pb-3 mb-6 gap-2">
+                <div>
+                    <span class="font-mono text-xs uppercase tracking-widest text-editorial-vermilion block">Módulo // 03</span>
+                    <h2 class="font-serif text-3xl sm:text-4xl text-editorial-ink">Estructura, Secciones &amp; Narrativa</h2>
+                </div>
+                <span class="font-mono text-xs text-editorial-muted">Arma los bloques de tu página a tu medida</span>
+            </div>
+
+            <div class="module-progress flex items-center gap-3 mb-5 font-mono text-xs uppercase tracking-wider text-editorial-muted" data-progress-module="03"><span class="mp-text whitespace-nowrap">0 / 0 listos</span><div class="flex-1 h-1 bg-editorial-stone overflow-hidden"><div class="mp-bar h-full bg-editorial-forest transition-all duration-300" style="width:0%;"></div></div></div>
+            <div class="space-y-5 module-questions" data-module="03">
+                <!-- P12: Constructor de bloques + tags libres -->
+                <article class="question-card bg-editorial-surface border border-editorial-border p-5 sm:p-7" data-qid="12" data-essential="true" data-qtype="tags-builder" data-qtitle="Secciones que debe tener la página web">
+                    <div class="flex items-start justify-between gap-4 mb-3">
+                        <span class="font-mono text-xs font-semibold text-editorial-vermilion">[12] · ESENCIAL</span>
+                        <button type="button" class="toggle-skip-btn font-mono text-xs uppercase px-3 py-2.5 min-h-[44px] inline-flex items-center border border-editorial-border hover:border-editorial-ink text-editorial-muted hover:text-editorial-ink transition">Omitir punto</button>
+                    </div>
+                    <div class="question-body">
+                        <h3 class="text-base sm:text-lg font-bold text-editorial-ink mb-1">Selecciona las secciones que quieres incluir (o crea tus propias secciones)</h3>
+                        <p class="text-sm text-editorial-muted mb-3">Toca para activar/desactivar, y si quieres una sección nueva escríbela abajo y presiona <strong>Enter</strong> o <strong>Añadir</strong>:</p>
+                        
+                        <div class="flex flex-wrap gap-2 mb-4 tag-pool">
+                            <button type="button" class="option-chip px-3.5 py-2 border border-editorial-border bg-editorial-paper text-xs" data-value="Portada Editorial (Hero)">Portada Editorial</button>
+                            <button type="button" class="option-chip px-3.5 py-2 border border-editorial-border bg-editorial-paper text-xs" data-value="Sobre mí / Manifiesto">Sobre mí / Manifiesto</button>
+                            <button type="button" class="option-chip px-3.5 py-2 border border-editorial-border bg-editorial-paper text-xs" data-value="Servicios / Programas">Servicios / Programas</button>
+                            <button type="button" class="option-chip px-3.5 py-2 border border-editorial-border bg-editorial-paper text-xs" data-value="Portafolio / Galería de Videos">Portafolio / Videos</button>
+                            <button type="button" class="option-chip px-3.5 py-2 border border-editorial-border bg-editorial-paper text-xs" data-value="Experiencia Estudio / Grabación">Experiencia Estudio</button>
+                            <button type="button" class="option-chip px-3.5 py-2 border border-editorial-border bg-editorial-paper text-xs" data-value="Testimonios / Reseñas">Testimonios / Reseñas</button>
+                            <button type="button" class="option-chip px-3.5 py-2 border border-editorial-border bg-editorial-paper text-xs" data-value="Prensa / Entrevistas">Prensa / Entrevistas</button>
+                            <button type="button" class="option-chip px-3.5 py-2 border border-editorial-border bg-editorial-paper text-xs" data-value="Preguntas Frecuentes (FAQ)">Preguntas Frecuentes</button>
+                            <button type="button" class="option-chip px-3.5 py-2 border border-editorial-border bg-editorial-paper text-xs" data-value="Contacto / Reservas">Contacto / Reservas</button>
+                        </div>
+
+                        <div class="flex gap-2">
+                            <input type="text" class="arch-input custom-tag-input flex-1 px-3.5 py-2 text-xs" placeholder="Escribe otra sección (ej. Tienda de Tracks, Eventos en Vivo, Blog)...">
+                            <button type="button" class="add-tag-btn px-4 py-2 bg-editorial-ink text-editorial-surface font-mono text-xs uppercase hover:bg-editorial-vermilion transition">Añadir</button>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- P13 -->
+                <article class="question-card bg-editorial-surface border border-editorial-border p-5 sm:p-7" data-qid="13" data-essential="true" data-qtype="textarea" data-qtitle="Biografía / Historia / Enfoque personal">
+                    <div class="flex items-start justify-between gap-4 mb-3">
+                        <span class="font-mono text-xs font-semibold text-editorial-vermilion">[13] · ESENCIAL</span>
+                        <button type="button" class="toggle-skip-btn font-mono text-xs uppercase px-3 py-2.5 min-h-[44px] inline-flex items-center border border-editorial-border hover:border-editorial-ink text-editorial-muted hover:text-editorial-ink transition">Omitir punto</button>
+                    </div>
+                    <div class="question-body">
+                        <label for="in-13" class="block text-base sm:text-lg font-bold text-editorial-ink mb-1">¿Cómo quieres contar tu historia o presentar el proyecto?</label>
+                        <p class="text-sm text-editorial-muted mb-3">Escribe los puntos clave de tu trayectoria, estudios, filosofía o lo que quieras que la gente sepa de ti (sin formalidades forzadas).</p>
+                        <textarea id="in-13" rows="4" class="arch-input w-full px-4 py-3 text-sm" placeholder="Ej. Formación, años de experiencia, lo que te apasiona, escenarios, enfoque humano..."></textarea>
+                    </div>
+                </article>
+
+                <!-- P14 -->
+                <article class="question-card bg-editorial-surface border border-editorial-border p-5 sm:p-7" data-qid="14" data-essential="false" data-qtype="textarea" data-qtitle="Diferenciador único frente a la competencia">
+                    <div class="flex items-start justify-between gap-4 mb-3">
+                        <span class="font-mono text-xs font-semibold text-editorial-muted">[14] · PROPUESTA DE VALOR</span>
+                        <button type="button" class="toggle-skip-btn font-mono text-xs uppercase px-3 py-2.5 min-h-[44px] inline-flex items-center border border-editorial-border hover:border-editorial-ink text-editorial-muted hover:text-editorial-ink transition">Omitir punto</button>
+                    </div>
+                    <div class="question-body">
+                        <label for="in-14" class="block text-base sm:text-lg font-bold text-editorial-ink mb-1">¿Qué hace diferente tu trabajo frente a cualquier otra opción?</label>
+                        <textarea id="in-14" rows="2" class="arch-input w-full px-4 py-3 text-sm" placeholder="Ej. El acompañamiento personalizado, la posibilidad de grabar en estudio, la mezcla de técnica y emoción..."></textarea>
+                    </div>
+                </article>
+
+                <!-- P15 -->
+                <article class="question-card bg-editorial-surface border border-editorial-border p-5 sm:p-7" data-qid="15" data-essential="false" data-qtype="textarea" data-qtitle="Logros, reseñas o credenciales a presumir">
+                    <div class="flex items-start justify-between gap-4 mb-3">
+                        <span class="font-mono text-xs font-semibold text-editorial-muted">[15] · CREDIBILIDAD</span>
+                        <button type="button" class="toggle-skip-btn font-mono text-xs uppercase px-3 py-2.5 min-h-[44px] inline-flex items-center border border-editorial-border hover:border-editorial-ink text-editorial-muted hover:text-editorial-ink transition">Omitir punto</button>
+                    </div>
+                    <div class="question-body">
+                        <label for="in-15" class="block text-base sm:text-lg font-bold text-editorial-ink mb-1">Cifras, reseñas, teatros, marcas o logros que quieras destacar</label>
+                        <textarea id="in-15" rows="2" class="arch-input w-full px-4 py-3 text-sm" placeholder="Ej. +86 reseñas de 5 estrellas, +50 alumnos, presentaciones en Querétaro y Guanajuato, colaboraciones..."></textarea>
+                    </div>
+                </article>
+
+                <!-- P16 -->
+                <article class="question-card bg-editorial-surface border border-editorial-border p-5 sm:p-7" data-qid="16" data-essential="false" data-qtype="textarea" data-qtitle="Material multimedia (fotos, videos, audios) disponible">
+                    <div class="flex items-start justify-between gap-4 mb-3">
+                        <span class="font-mono text-xs font-semibold text-editorial-muted">[16] · MULTIMEDIA</span>
+                        <button type="button" class="toggle-skip-btn font-mono text-xs uppercase px-3 py-2.5 min-h-[44px] inline-flex items-center border border-editorial-border hover:border-editorial-ink text-editorial-muted hover:text-editorial-ink transition">Omitir punto</button>
+                    </div>
+                    <div class="question-body">
+                        <label for="in-16" class="block text-base sm:text-lg font-bold text-editorial-ink mb-1">¿Con qué fotos, videos de YouTube, audios o material cuentas ya?</label>
+                        <textarea id="in-16" rows="2" class="arch-input w-full px-4 py-3 text-sm" placeholder="Pega enlaces de videos/canciones o dime qué sesión de fotos tienes lista (o si harás fotos nuevas)..."></textarea>
+                    </div>
+                </article>
+
+                <!-- P17 -->
+                <article class="question-card bg-editorial-surface border border-editorial-border p-5 sm:p-7" data-qid="17" data-essential="true" data-qtype="textarea" data-qtitle="Redes sociales y plataformas digitales">
+                    <div class="flex items-start justify-between gap-4 mb-3">
+                        <span class="font-mono text-xs font-semibold text-editorial-vermilion">[17] · ESENCIAL</span>
+                        <button type="button" class="toggle-skip-btn font-mono text-xs uppercase px-3 py-2.5 min-h-[44px] inline-flex items-center border border-editorial-border hover:border-editorial-ink text-editorial-muted hover:text-editorial-ink transition">Omitir punto</button>
+                    </div>
+                    <div class="question-body">
+                        <label for="in-17" class="block text-base sm:text-lg font-bold text-editorial-ink mb-1">Redes sociales, canales o plataformas que quieras conectar</label>
+                        <textarea id="in-17" rows="2" class="arch-input w-full px-4 py-3 text-sm" placeholder="Instagram, TikTok, YouTube, Spotify, Facebook, etc. (escribe tus @usuarios o links)..."></textarea>
+                    </div>
+                </article>
+                <!-- P30 -->
+                <article class="question-card bg-editorial-surface border border-editorial-border p-5 sm:p-7" data-qid="30" data-essential="true" data-qtype="multi-custom" data-qtitle="¿Quién escribe los textos y consigue las fotos?">
+                    <div class="flex items-start justify-between gap-4 mb-3">
+                        <span class="font-mono text-xs font-semibold text-editorial-vermilion">[30] · CONTENIDO</span>
+                        <button type="button" class="toggle-skip-btn font-mono text-xs uppercase px-3 py-2.5 min-h-[44px] inline-flex items-center border border-editorial-border hover:border-editorial-ink text-editorial-muted hover:text-editorial-ink transition">Omitir punto</button>
+                    </div>
+                    <div class="question-body">
+                        <h3 class="text-base sm:text-lg font-bold text-editorial-ink mb-1">¿Quién escribe los textos y consigue las fotos?</h3>
+                        <p class="text-sm text-editorial-muted mb-3">Dinos con qué material cuentas hoy para saber cuánto trabajo de contenido habrá que hacer.</p>
+                        <div class="flex flex-wrap gap-2 mb-3">
+                            <button type="button" class="option-chip px-4 py-2.5 border border-editorial-border bg-editorial-paper text-xs" data-value="Ya tengo textos listos">Ya tengo textos listos</button>
+                            <button type="button" class="option-chip px-4 py-2.5 border border-editorial-border bg-editorial-paper text-xs" data-value="Necesito ayuda para redactar">Necesito ayuda para redactar</button>
+                            <button type="button" class="option-chip px-4 py-2.5 border border-editorial-border bg-editorial-paper text-xs" data-value="Tengo fotos, pero me faltan">Tengo fotos, pero me faltan</button>
+                            <button type="button" class="option-chip px-4 py-2.5 border border-editorial-border bg-editorial-paper text-xs" data-value="Necesito sesión de fotos profesional">Necesito sesión de fotos profesional</button>
+                            <button type="button" class="option-chip px-4 py-2.5 border border-editorial-border bg-editorial-paper text-xs" data-value="Lo resolvemos juntos">Lo resolvemos juntos</button>
+                        </div>
+                        <input type="text" class="arch-input custom-extra-input w-full px-3.5 py-2.5 text-xs sm:text-sm" placeholder="Detalle sobre tu material...">
+                    </div>
+                </article>
+
+            </div>
+
+            <div class="mt-4">
+                <button type="button" class="add-custom-question-btn font-mono text-xs uppercase tracking-wider px-4 py-2.5 border border-dashed border-editorial-ink/50 hover:border-editorial-ink hover:bg-editorial-surface text-editorial-ink transition flex items-center gap-2" data-target-module="03">
+                    <span>+ Agregar pregunta o sección personalizada en este módulo</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- =================================================================
+             MÓDULO 04: OFERTA, SERVICIOS & MODELO COMERCIAL (18 - 22)
+        ================================================================== -->
+        <section id="sec-4" class="scroll-mt-20">
+            <div class="flex flex-col sm:flex-row sm:items-end justify-between border-b-2 border-editorial-ink pb-3 mb-6 gap-2">
+                <div>
+                    <span class="font-mono text-xs uppercase tracking-widest text-editorial-vermilion block">Módulo // 04</span>
+                    <h2 class="font-serif text-3xl sm:text-4xl text-editorial-ink">Oferta, Servicios &amp; Modelo Comercial</h2>
+                </div>
+                <span class="font-mono text-xs text-editorial-muted">Opcional si tu web es 100% portafolio artístico</span>
+            </div>
+
+            <div class="module-progress flex items-center gap-3 mb-5 font-mono text-xs uppercase tracking-wider text-editorial-muted" data-progress-module="04"><span class="mp-text whitespace-nowrap">0 / 0 listos</span><div class="flex-1 h-1 bg-editorial-stone overflow-hidden"><div class="mp-bar h-full bg-editorial-forest transition-all duration-300" style="width:0%;"></div></div></div>
+            <div class="space-y-5 module-questions" data-module="04">
+                <!-- P18 -->
+                <article class="question-card bg-editorial-surface border border-editorial-border p-5 sm:p-7" data-qid="18" data-essential="true" data-qtype="textarea" data-qtitle="Servicios, clases, paquetes o productos ofrecidos">
+                    <div class="flex items-start justify-between gap-4 mb-3">
+                        <span class="font-mono text-xs font-semibold text-editorial-vermilion">[18] · ESENCIAL</span>
+                        <button type="button" class="toggle-skip-btn font-mono text-xs uppercase px-3 py-2.5 min-h-[44px] inline-flex items-center border border-editorial-border hover:border-editorial-ink text-editorial-muted hover:text-editorial-ink transition">Omitir punto</button>
+                    </div>
+                    <div class="question-body">
+                        <label for="in-18" class="block text-base sm:text-lg font-bold text-editorial-ink mb-1">Lista de servicios, experiencias, clases o contrataciones que ofrecerás</label>
+                        <p class="text-sm text-editorial-muted mb-3">Escríbelo como tú lo explicas a un cliente real (ej. clases individuales, paquetes mensuales, vocal coaching para grabación, shows en vivo, etc.).</p>
+                        <textarea id="in-18" rows="3" class="arch-input w-full px-4 py-3 text-sm" placeholder="Detalla aquí tus servicios o líneas de trabajo..."></textarea>
+                    </div>
+                </article>
+
+                <!-- P19 -->
+                <article class="question-card bg-editorial-surface border border-editorial-border p-5 sm:p-7" data-qid="19" data-essential="false" data-qtype="multi-custom" data-qtitle="Modalidades de operación">
+                    <div class="flex items-start justify-between gap-4 mb-3">
+                        <span class="font-mono text-xs font-semibold text-editorial-muted">[19] · MODALIDAD</span>
+                        <button type="button" class="toggle-skip-btn font-mono text-xs uppercase px-3 py-2.5 min-h-[44px] inline-flex items-center border border-editorial-border hover:border-editorial-ink text-editorial-muted hover:text-editorial-ink transition">Omitir punto</button>
+                    </div>
+                    <div class="question-body">
+                        <h3 class="text-base sm:text-lg font-bold text-editorial-ink mb-3">¿Cómo operas o entregas tu trabajo?</h3>
+                        <div class="flex flex-wrap gap-2 mb-3">
+                            <button type="button" class="option-chip px-3.5 py-2 border border-editorial-border bg-editorial-paper text-xs" data-value="Presencial en estudio / sede">Presencial en estudio / sede</button>
+                            <button type="button" class="option-chip px-3.5 py-2 border border-editorial-border bg-editorial-paper text-xs" data-value="Online en vivo (Nacional e Internacional)">Online en vivo</button>
+                            <button type="button" class="option-chip px-3.5 py-2 border border-editorial-border bg-editorial-paper text-xs" data-value="Eventos / Locaciones externas">Eventos / Locaciones</button>
+                            <button type="button" class="option-chip px-3.5 py-2 border border-editorial-border bg-editorial-paper text-xs" data-value="Sesiones individuales y grupales">Individual y Grupal</button>
+                        </div>
+                        <input type="text" class="arch-input custom-extra-input w-full px-3.5 py-2.5 text-xs" placeholder="Zona o ciudad de referencia (ej. Santiago de Querétaro, sin dirección exacta)...">
+                    </div>
+                </article>
+
+                <!-- P20 -->
+                <article class="question-card bg-editorial-surface border border-editorial-border p-5 sm:p-7" data-qid="20" data-essential="false" data-qtype="single-custom" data-qtitle="Manejo de precios en la página">
+                    <div class="flex items-start justify-between gap-4 mb-3">
+                        <span class="font-mono text-xs font-semibold text-editorial-muted">[20] · PRECIOS</span>
+                        <button type="button" class="toggle-skip-btn font-mono text-xs uppercase px-3 py-2.5 min-h-[44px] inline-flex items-center border border-editorial-border hover:border-editorial-ink text-editorial-muted hover:text-editorial-ink transition">Omitir punto</button>
+                    </div>
+                    <div class="question-body">
+                        <h3 class="text-base sm:text-lg font-bold text-editorial-ink mb-3">¿Quieres mostrar precios públicos en la web?</h3>
+                        <div class="flex flex-wrap gap-2 mb-3">
+                            <button type="button" class="option-chip px-3.5 py-2 border border-editorial-border bg-editorial-paper text-xs" data-value="Sí, mostrar tarifas y paquetes claros">Sí, tarifas y paquetes claros</button>
+                            <button type="button" class="option-chip px-3.5 py-2 border border-editorial-border bg-editorial-paper text-xs" data-value="Solo precios base ('Desde $...')">Solo "Desde $..."</button>
+                            <button type="button" class="option-chip px-3.5 py-2 border border-editorial-border bg-editorial-paper text-xs" data-value="No mostrar precios; cotizar directo">Sin precios (cotización directa)</button>
+                        </div>
+                        <input type="text" class="arch-input custom-extra-input w-full px-3.5 py-2.5 text-xs" placeholder="Si quieres poner precios o paquetes, escríbelos aquí...">
+                    </div>
+                </article>
+
+                <!-- P21 -->
+                <article class="question-card bg-editorial-surface border border-editorial-border p-5 sm:p-7" data-qid="21" data-essential="false" data-qtype="text" data-qtitle="Gancho inicial / Primera cita o valoración">
+                    <div class="flex items-start justify-between gap-4 mb-3">
+                        <span class="font-mono text-xs font-semibold text-editorial-muted">[21] · CONVERSIÓN</span>
+                        <button type="button" class="toggle-skip-btn font-mono text-xs uppercase px-3 py-2.5 min-h-[44px] inline-flex items-center border border-editorial-border hover:border-editorial-ink text-editorial-muted hover:text-editorial-ink transition">Omitir punto</button>
+                    </div>
+                    <div class="question-body">
+                        <label for="in-21" class="block text-base sm:text-lg font-bold text-editorial-ink mb-1">¿Hay algún primer paso especial para clientes nuevos?</label>
+                        <input type="text" id="in-21" class="arch-input w-full px-4 py-3 text-sm" placeholder="Ej. Llamada de diagnóstico gratis, clase de valoración, dossier descargable, reserva directa...">
+                    </div>
+                </article>
+            </div>
+
+            <div class="mt-4">
+                <button type="button" class="add-custom-question-btn font-mono text-xs uppercase tracking-wider px-4 py-2.5 border border-dashed border-editorial-ink/50 hover:border-editorial-ink hover:bg-editorial-surface text-editorial-ink transition flex items-center gap-2" data-target-module="04">
+                    <span>+ Agregar pregunta o detalle comercial en este módulo</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- =================================================================
+             MÓDULO 05: TÉCNICO, DOMINIO & CARTA BLANCA (22 - 26)
+        ================================================================== -->
+        <section id="sec-5" class="scroll-mt-20">
+            <div class="flex flex-col sm:flex-row sm:items-end justify-between border-b-2 border-editorial-ink pb-3 mb-6 gap-2">
+                <div>
+                    <span class="font-mono text-xs uppercase tracking-widest text-editorial-vermilion block">Módulo // 05</span>
+                    <h2 class="font-serif text-3xl sm:text-4xl text-editorial-ink">Técnico, Dominio &amp; Carta Blanca</h2>
+                </div>
+                <span class="font-mono text-xs text-editorial-muted">Últimos detalles para arrancar construcción</span>
+            </div>
+
+            <div class="module-progress flex items-center gap-3 mb-5 font-mono text-xs uppercase tracking-wider text-editorial-muted" data-progress-module="05"><span class="mp-text whitespace-nowrap">0 / 0 listos</span><div class="flex-1 h-1 bg-editorial-stone overflow-hidden"><div class="mp-bar h-full bg-editorial-forest transition-all duration-300" style="width:0%;"></div></div></div>
+            <div class="space-y-5 module-questions" data-module="05">
+                <!-- P22 -->
+                <article class="question-card bg-editorial-surface border border-editorial-border p-5 sm:p-7" data-qid="22" data-essential="true" data-qtype="text" data-qtitle="WhatsApp y correo oficial de contacto">
+                    <div class="flex items-start justify-between gap-4 mb-3">
+                        <span class="font-mono text-xs font-semibold text-editorial-vermilion">[22] · ESENCIAL</span>
+                        <button type="button" class="toggle-skip-btn font-mono text-xs uppercase px-3 py-2.5 min-h-[44px] inline-flex items-center border border-editorial-border hover:border-editorial-ink text-editorial-muted hover:text-editorial-ink transition">Omitir punto</button>
+                    </div>
+                    <div class="question-body">
+                        <label for="in-22" class="block text-base sm:text-lg font-bold text-editorial-ink mb-1">WhatsApp comercial y/o correo donde llegarán los mensajes de la web</label>
+                        <input type="text" id="in-22" class="arch-input w-full px-4 py-3 text-sm" placeholder="Ej. WhatsApp: +52 442... | Correo: contacto@...">
+                    </div>
+                </article>
+
+                <!-- P23 -->
+                <article class="question-card bg-editorial-surface border border-editorial-border p-5 sm:p-7" data-qid="23" data-essential="true" data-qtype="text" data-qtitle="Ideas de dominio web (.com / .mx)">
+                    <div class="flex items-start justify-between gap-4 mb-3">
+                        <span class="font-mono text-xs font-semibold text-editorial-vermilion">[23] · ESENCIAL</span>
+                        <button type="button" class="toggle-skip-btn font-mono text-xs uppercase px-3 py-2.5 min-h-[44px] inline-flex items-center border border-editorial-border hover:border-editorial-ink text-editorial-muted hover:text-editorial-ink transition">Omitir punto</button>
+                    </div>
+                    <div class="question-body">
+                        <label for="in-23" class="block text-base sm:text-lg font-bold text-editorial-ink mb-1">¿Qué nombre de dominio te gustaría tener? (pon 1 o 2 opciones)</label>
+                        <input type="text" id="in-23" class="arch-input w-full px-4 py-3 text-sm" placeholder="Ej. samantharamos.mx, samramos.com, o sugiere tú...">
+                    </div>
+                </article>
+
+                <!-- P24 -->
+                <article class="question-card bg-editorial-surface border border-editorial-border p-5 sm:p-7" data-qid="24" data-essential="false" data-qtype="multi-custom" data-qtitle="Funciones extra o integraciones">
+                    <div class="flex items-start justify-between gap-4 mb-3">
+                        <span class="font-mono text-xs font-semibold text-editorial-muted">[24] · FUNCIONALIDAD</span>
+                        <button type="button" class="toggle-skip-btn font-mono text-xs uppercase px-3 py-2.5 min-h-[44px] inline-flex items-center border border-editorial-border hover:border-editorial-ink text-editorial-muted hover:text-editorial-ink transition">Omitir punto</button>
+                    </div>
+                    <div class="question-body">
+                        <h3 class="text-base sm:text-lg font-bold text-editorial-ink mb-3">Herramientas especiales que te gustaría integrar</h3>
+                        <div class="flex flex-wrap gap-2 mb-3">
+                            <button type="button" class="option-chip px-3.5 py-2 border border-editorial-border bg-editorial-paper text-xs" data-value="Reproductor de Audio / Demos">Reproductor de Audio / Demos</button>
+                            <button type="button" class="option-chip px-3.5 py-2 border border-editorial-border bg-editorial-paper text-xs" data-value="Galería de Video integrada">Galería de Video</button>
+                            <button type="button" class="option-chip px-3.5 py-2 border border-editorial-border bg-editorial-paper text-xs" data-value="Calendario de citas (Calendly)">Calendario de citas</button>
+                            <button type="button" class="option-chip px-3.5 py-2 border border-editorial-border bg-editorial-paper text-xs" data-value="Descarga de Press Kit / Dossier PDF">Descarga de Press Kit PDF</button>
+                            <button type="button" class="option-chip px-3.5 py-2 border border-editorial-border bg-editorial-paper text-xs" data-value="Formulario con filtro de intereses">Formulario inteligente</button>
+                        </div>
+                        <input type="text" class="arch-input custom-extra-input w-full px-3.5 py-2.5 text-xs" placeholder="¿Alguna otra función que hayas visto y te gustaría tener?">
+                    </div>
+                </article>
+
+                <!-- P25 -->
+                <article class="question-card bg-editorial-surface border border-editorial-border p-5 sm:p-7" data-qid="25" data-essential="false" data-qtype="text" data-qtitle="Fecha objetivo de lanzamiento">
+                    <div class="flex items-start justify-between gap-4 mb-3">
+                        <span class="font-mono text-xs font-semibold text-editorial-muted">[25] · TIEMPOS</span>
+                        <button type="button" class="toggle-skip-btn font-mono text-xs uppercase px-3 py-2.5 min-h-[44px] inline-flex items-center border border-editorial-border hover:border-editorial-ink text-editorial-muted hover:text-editorial-ink transition">Omitir punto</button>
+                    </div>
+                    <div class="question-body">
+                        <label for="in-25" class="block text-base sm:text-lg font-bold text-editorial-ink mb-1">¿Tienes alguna fecha límite, lanzamiento o evento para estrenar la página?</label>
+                        <input type="text" id="in-25" class="arch-input w-full px-4 py-3 text-sm" placeholder="Ej. Sin prisa específica / Para inicios de mes / Antes de un evento...">
+                    </div>
+                </article>
+
+                <!-- P31 -->
+                <article class="question-card bg-editorial-surface border border-editorial-border p-5 sm:p-7" data-qid="31" data-essential="true" data-qtype="single-custom" data-qtitle="¿Cuál es tu presupuesto aproximado para la web?">
+                    <div class="flex items-start justify-between gap-4 mb-3">
+                        <span class="font-mono text-xs font-semibold text-editorial-vermilion">[31] · PRESUPUESTO</span>
+                        <button type="button" class="toggle-skip-btn font-mono text-xs uppercase px-3 py-2.5 min-h-[44px] inline-flex items-center border border-editorial-border hover:border-editorial-ink text-editorial-muted hover:text-editorial-ink transition">Omitir punto</button>
+                    </div>
+                    <div class="question-body">
+                        <h3 class="text-base sm:text-lg font-bold text-editorial-ink mb-1">¿Cuál es tu presupuesto aproximado para la web?</h3>
+                        <p class="text-sm text-editorial-muted mb-3">Las webs de portafolio suelen empezar desde $1,000. Dinos en qué rango te sientes cómodo y te propondremos la mejor versión para ese monto. Es solo una referencia, no un compromiso.</p>
+                        <div class="flex flex-wrap gap-2 mb-3">
+                            <button type="button" class="option-chip px-4 py-2.5 border border-editorial-border bg-editorial-paper text-xs" data-value="Desde $1,000 (portafolio básico)">Desde $1,000 (portafolio básico)</button>
+                            <button type="button" class="option-chip px-4 py-2.5 border border-editorial-border bg-editorial-paper text-xs" data-value="$1,000 – $2,500">$1,000 – $2,500</button>
+                            <button type="button" class="option-chip px-4 py-2.5 border border-editorial-border bg-editorial-paper text-xs" data-value="Más de $2,500">Más de $2,500</button>
+                            <button type="button" class="option-chip px-4 py-2.5 border border-editorial-border bg-editorial-paper text-xs" data-value="Quiero que me recomiendes">Quiero que me recomiendes</button>
+                        </div>
+                        <input type="text" class="arch-input custom-extra-input w-full px-3.5 py-2.5 text-xs sm:text-sm" placeholder="Si tienes un monto en mente, escríbelo aquí...">
+                    </div>
+                </article>
+
+                <!-- P32 -->
+                <article class="question-card bg-editorial-surface border border-editorial-border p-5 sm:p-7" data-qid="32" data-essential="false" data-qtype="single-custom" data-qtitle="¿Quién va a actualizar la web después del lanzamiento?">
+                    <div class="flex items-start justify-between gap-4 mb-3">
+                        <span class="font-mono text-xs font-semibold text-editorial-muted">[32] · MANTENIMIENTO</span>
+                        <button type="button" class="toggle-skip-btn font-mono text-xs uppercase px-3 py-2.5 min-h-[44px] inline-flex items-center border border-editorial-border hover:border-editorial-ink text-editorial-muted hover:text-editorial-ink transition">Omitir punto</button>
+                    </div>
+                    <div class="question-body">
+                        <h3 class="text-base sm:text-lg font-bold text-editorial-ink mb-1">¿Quién va a actualizar la web después del lanzamiento?</h3>
+                        <p class="text-sm text-editorial-muted mb-3">Esto define qué tan fácil tiene que ser editar el sitio.</p>
+                        <div class="flex flex-wrap gap-2 mb-3">
+                            <button type="button" class="option-chip px-4 py-2.5 border border-editorial-border bg-editorial-paper text-xs" data-value="Yo misma la edito">Yo misma la edito</button>
+                            <button type="button" class="option-chip px-4 py-2.5 border border-editorial-border bg-editorial-paper text-xs" data-value="Quiero algo fácil de editar">Quiero algo fácil de editar</button>
+                            <button type="button" class="option-chip px-4 py-2.5 border border-editorial-border bg-editorial-paper text-xs" data-value="Prefiero que me lo hagan">Prefiero que me lo hagan</button>
+                            <button type="button" class="option-chip px-4 py-2.5 border border-editorial-border bg-editorial-paper text-xs" data-value="Aún no lo sé">Aún no lo sé</button>
+                        </div>
+                        <input type="text" class="arch-input custom-extra-input w-full px-3.5 py-2.5 text-xs sm:text-sm" placeholder="Algo más sobre cómo quieres manejarlo...">
+                    </div>
+                </article>
+
+                <!-- P33 -->
+                <article class="question-card bg-editorial-surface border border-editorial-border p-5 sm:p-7" data-qid="33" data-essential="false" data-qtype="single-custom" data-qtitle="¿Quieres que Google te encuentre?">
+                    <div class="flex items-start justify-between gap-4 mb-3">
+                        <span class="font-mono text-xs font-semibold text-editorial-muted">[33] · BÚSQUEDA</span>
+                        <button type="button" class="toggle-skip-btn font-mono text-xs uppercase px-3 py-2.5 min-h-[44px] inline-flex items-center border border-editorial-border hover:border-editorial-ink text-editorial-muted hover:text-editorial-ink transition">Omitir punto</button>
+                    </div>
+                    <div class="question-body">
+                        <h3 class="text-base sm:text-lg font-bold text-editorial-ink mb-1">¿Quieres que Google te encuentre?</h3>
+                        <p class="text-sm text-editorial-muted mb-3">Si alguien busca tu nombre o tu tipo de servicio, ¿te gustaría aparecer?</p>
+                        <div class="flex flex-wrap gap-2 mb-3">
+                            <button type="button" class="option-chip px-4 py-2.5 border border-editorial-border bg-editorial-paper text-xs" data-value="Sí, es importante">Sí, es importante</button>
+                            <button type="button" class="option-chip px-4 py-2.5 border border-editorial-border bg-editorial-paper text-xs" data-value="Que me encuentren por mi nombre">Que me encuentren por mi nombre</button>
+                            <button type="button" class="option-chip px-4 py-2.5 border border-editorial-border bg-editorial-paper text-xs" data-value="Por ahora no">Por ahora no</button>
+                        </div>
+                        <input type="text" class="arch-input custom-extra-input w-full px-3.5 py-2.5 text-xs sm:text-sm" placeholder="Palabras que te gustaría que te asocien...">
+                    </div>
+                </article>
+
+                <!-- P34 -->
+                <article class="question-card bg-editorial-surface border border-editorial-border p-5 sm:p-7" data-qid="34" data-essential="false" data-qtype="multi-custom" data-qtitle="¿Qué temas legales necesitas cubrir?">
+                    <div class="flex items-start justify-between gap-4 mb-3">
+                        <span class="font-mono text-xs font-semibold text-editorial-muted">[34] · LEGAL</span>
+                        <button type="button" class="toggle-skip-btn font-mono text-xs uppercase px-3 py-2.5 min-h-[44px] inline-flex items-center border border-editorial-border hover:border-editorial-ink text-editorial-muted hover:text-editorial-ink transition">Omitir punto</button>
+                    </div>
+                    <div class="question-body">
+                        <h3 class="text-base sm:text-lg font-bold text-editorial-ink mb-1">¿Qué temas legales necesitas cubrir?</h3>
+                        <p class="text-sm text-editorial-muted mb-3">Si la web recibe datos o vende clases o paquetes, conviene tenerlos listos desde el inicio.</p>
+                        <div class="flex flex-wrap gap-2 mb-3">
+                            <button type="button" class="option-chip px-4 py-2.5 border border-editorial-border bg-editorial-paper text-xs" data-value="Aviso de privacidad">Aviso de privacidad</button>
+                            <button type="button" class="option-chip px-4 py-2.5 border border-editorial-border bg-editorial-paper text-xs" data-value="Términos para clases o paquetes">Términos para clases o paquetes</button>
+                            <button type="button" class="option-chip px-4 py-2.5 border border-editorial-border bg-editorial-paper text-xs" data-value="Derechos de uso de fotos y videos">Derechos de uso de fotos y videos</button>
+                            <button type="button" class="option-chip px-4 py-2.5 border border-editorial-border bg-editorial-paper text-xs" data-value="Cookies y analítica">Cookies y analítica</button>
+                            <button type="button" class="option-chip px-4 py-2.5 border border-editorial-border bg-editorial-paper text-xs" data-value="No sé todavía">No sé todavía</button>
+                        </div>
+                        <input type="text" class="arch-input custom-extra-input w-full px-3.5 py-2.5 text-xs sm:text-sm" placeholder="Otro tema legal...">
+                    </div>
+                </article>
+
+                <!-- P26: CARTA BLANCA -->
+                <article class="question-card bg-editorial-surface border-2 border-editorial-ink p-5 sm:p-7" data-qid="26" data-essential="true" data-qtype="textarea" data-qtitle="Carta Blanca / Espacio Libre Total">
+                    <div class="flex items-start justify-between gap-4 mb-3">
+                        <span class="font-mono text-xs font-semibold text-editorial-vermilion">[26] · ESPACIO SIN REGLAS</span>
+                        <button type="button" class="toggle-skip-btn font-mono text-xs uppercase px-3 py-2.5 min-h-[44px] inline-flex items-center border border-editorial-border hover:border-editorial-ink text-editorial-muted hover:text-editorial-ink transition">Omitir punto</button>
+                    </div>
+                    <div class="question-body">
+                        <label for="in-26" class="block font-serif text-2xl sm:text-3xl text-editorial-ink mb-1">Carta Blanca: Todo lo que no te pregunté y me quieras decir</label>
+                        <p class="text-sm text-editorial-muted mb-3">Usa este cuadro para escribir cualquier idea suelta, duda, inquietud, visión a futuro o detalle que quieras que tomemos en cuenta al diseñar.</p>
+                        <textarea id="in-26" rows="5" class="arch-input w-full px-4 py-3 text-sm" placeholder="Escribe libremente aquí..."></textarea>
+                    </div>
+                </article>
+            </div>
+
+            <div class="mt-4">
+                <button type="button" class="add-custom-question-btn font-mono text-xs uppercase tracking-wider px-4 py-2.5 border border-dashed border-editorial-ink/50 hover:border-editorial-ink hover:bg-editorial-surface text-editorial-ink transition flex items-center gap-2" data-target-module="05">
+                    <span>+ Agregar otra pregunta o bloque libre</span>
+                </button>
+            </div>
+        </section>
+
+
+        <!-- =================================================================
+             RESUMEN: TU BRIEF DE UN VISTAZO
+        ================================================================== -->
+        <section id="sec-resumen" class="scroll-mt-20 border-t-2 border-editorial-ink pt-8">
+            <span class="font-mono text-xs uppercase tracking-widest text-editorial-vermilion block">Resumen // Tu brief de un vistazo</span>
+            <h2 class="font-serif text-3xl sm:text-4xl text-editorial-ink mb-6">Así va tomando forma</h2>
+            <div class="grid sm:grid-cols-2 gap-4">
+                <div class="bg-editorial-surface border border-editorial-border p-5"><span class="font-mono text-xs uppercase tracking-widest text-editorial-muted block mb-2">Marca / proyecto</span><p id="sum-brand" class="text-sm sm:text-base text-editorial-ink font-semibold leading-snug break-words">— sin definir —</p></div>
+                <div class="bg-editorial-surface border border-editorial-border p-5"><span class="font-mono text-xs uppercase tracking-widest text-editorial-muted block mb-2">Público</span><p id="sum-public" class="text-sm sm:text-base text-editorial-ink font-semibold leading-snug break-words">— sin definir —</p></div>
+                <div class="bg-editorial-surface border border-editorial-border p-5"><span class="font-mono text-xs uppercase tracking-widest text-editorial-muted block mb-2">Paleta</span><p id="sum-palette" class="text-sm sm:text-base text-editorial-ink font-semibold leading-snug break-words">— sin definir —</p></div>
+                <div class="bg-editorial-surface border border-editorial-border p-5"><span class="font-mono text-xs uppercase tracking-widest text-editorial-muted block mb-2">Qué será un buen resultado</span><p id="sum-success" class="text-sm sm:text-base text-editorial-ink font-semibold leading-snug break-words">— sin definir —</p></div>
+                <div class="bg-editorial-surface border border-editorial-border p-5"><span class="font-mono text-xs uppercase tracking-widest text-editorial-muted block mb-2">Presupuesto</span><p id="sum-budget" class="text-sm sm:text-base text-editorial-ink font-semibold leading-snug break-words">— sin definir —</p></div>
+                <div class="bg-editorial-surface border border-editorial-border p-5"><span class="font-mono text-xs uppercase tracking-widest text-editorial-muted block mb-2">Secciones</span><p id="sum-sections" class="text-sm sm:text-base text-editorial-ink font-semibold leading-snug break-words">— sin definir —</p></div>
+                <div class="bg-editorial-forest text-editorial-paper p-5 sm:col-span-2">
+                    <span class="font-mono text-xs uppercase tracking-widest opacity-80 block mb-2">Progreso total</span>
+                    <p id="sum-progress" class="font-serif text-2xl sm:text-3xl leading-snug">0 de 0 puntos respondidos</p>
+                </div>
+            </div>
+        </section>
+        </main>
+
+    <!-- =====================================================================
+         BARRA INFERIOR FIJA DE ACCIÓN
+    ====================================================================== -->
+    <div class="fixed bottom-0 left-0 right-0 z-40 bg-editorial-paper/95 backdrop-blur-md border-t border-editorial-ink px-4 sm:px-8 py-3">
+        <div class="max-w-5xl mx-auto flex items-center justify-between gap-3">
+            <button type="button" id="openResetModalBtn" class="font-mono text-xs uppercase text-editorial-muted hover:text-editorial-vermilion transition px-2 py-2">
+                Limpiar
+            </button>
+
+            <div class="flex items-center gap-2.5 sm:gap-3">
+                <button type="button" id="previewBriefBtn" class="px-4 py-2.5 border border-editorial-ink bg-editorial-surface hover:bg-editorial-stone font-mono text-xs uppercase font-semibold text-editorial-ink transition">
+                    Vista Previa
+                </button>
+                <button type="button" id="sendBriefBtn" class="px-5 py-2.5 bg-editorial-ink hover:bg-editorial-vermilion text-editorial-surface font-mono text-xs uppercase font-semibold tracking-wider transition flex items-center gap-2">
+                    <span>Compilar &amp; Enviar</span>
+                    <span>→</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- =====================================================================
+         MODAL PARA AGREGAR PREGUNTA PERSONALIZADA POR EL USUARIO
+    ====================================================================== -->
+    <div id="customQuestionModal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs hidden items-center justify-center p-4">
+        <div class="bg-editorial-surface border-2 border-editorial-ink max-w-md w-full p-6 shadow-2xl">
+            <div class="flex items-center justify-between border-b border-editorial-border pb-3 mb-4">
+                <span class="font-mono text-xs uppercase tracking-widest text-editorial-vermilion">Bloque Personalizado</span>
+                <button type="button" id="closeCustomQModal" class="font-mono text-sm px-2 text-editorial-muted hover:text-editorial-ink">✕</button>
+            </div>
+            <h3 class="font-serif text-2xl text-editorial-ink mb-2">Crea tu propia pregunta o tema</h3>
+            <p class="text-sm text-editorial-muted mb-4">Si hay algo que consideras clave para tu página y no estaba en la lista, agrégalo aquí:</p>
+            
+            <div class="space-y-3">
+                <div>
+                    <label for="newQTitle" class="block font-mono text-[11px] uppercase text-editorial-ink mb-1">Título de tu pregunta o tema *</label>
+                    <input type="text" id="newQTitle" class="arch-input w-full px-3.5 py-2.5 text-sm" placeholder="Ej. Colaboraciones con otras marcas / Venta de merch...">
+                </div>
+                <div>
+                    <label for="newQAnswer" class="block font-mono text-[11px] uppercase text-editorial-ink mb-1">Tu respuesta o desarrollo</label>
+                    <textarea id="newQAnswer" rows="3" class="arch-input w-full px-3.5 py-2.5 text-sm" placeholder="Escribe aquí lo que quieres que incluyamos..."></textarea>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-2 mt-5 pt-3 border-t border-editorial-border">
+                <button type="button" id="cancelCustomQBtn" class="px-4 py-2 font-mono text-xs uppercase border border-editorial-border text-editorial-muted hover:text-editorial-ink">Cancelar</button>
+                <button type="button" id="confirmCustomQBtn" class="px-4 py-2 font-mono text-xs uppercase bg-editorial-ink text-editorial-surface hover:bg-editorial-vermilion transition">Añadir al Brief</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- =====================================================================
+         MODAL DE CONFIRMACIÓN DE REINICIO (SIN confirm())
+    ====================================================================== -->
+    <div id="resetConfirmModal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs hidden items-center justify-center p-4">
+        <div class="bg-editorial-surface border-2 border-editorial-ink max-w-sm w-full p-6 shadow-2xl">
+            <h3 class="font-serif text-2xl text-editorial-ink mb-2">¿Limpiar todas las respuestas?</h3>
+            <p class="text-xs text-editorial-muted leading-relaxed mb-5">Se borrarán los textos escritos y selecciones actuales para empezar el documento en blanco.</p>
+            <div class="flex justify-end gap-2">
+                <button type="button" id="cancelResetBtn" class="px-4 py-2 font-mono text-xs uppercase border border-editorial-border text-editorial-ink">Cancelar</button>
+                <button type="button" id="confirmResetBtn" class="px-4 py-2 font-mono text-xs uppercase bg-editorial-vermilion text-white">Sí, limpiar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- =====================================================================
+         MODAL DE RESUMEN COMPILADO Y ENVÍO POR WHATSAPP / COPIAR
+    ====================================================================== -->
+    <div id="summaryExportModal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs hidden items-center justify-center p-3 sm:p-6">
+        <div class="bg-editorial-surface border-2 border-editorial-ink max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl">
+            <div class="px-6 py-4 bg-editorial-ink text-editorial-surface flex items-center justify-between">
+                <div>
+                    <span class="font-mono text-[10px] uppercase tracking-widest text-editorial-vermilion block">Zenith Code // Documento Compilado</span>
+                    <h3 class="font-serif text-2xl">Tu Brief Está Listo</h3>
+                </div>
+                <button type="button" id="closeExportModalBtn" class="w-8 h-8 border border-white/20 text-white hover:bg-white/10 font-mono text-xs flex items-center justify-center">✕</button>
+            </div>
+
+            <div class="p-5 sm:p-6 overflow-y-auto flex-1 space-y-4">
+                <p class="text-xs text-editorial-muted leading-relaxed">
+                    Solo se incluyeron los puntos que dejaste activos y tus bloques personalizados. Puedes enviarlo directo por <strong class="text-editorial-ink">WhatsApp</strong> o <strong class="text-editorial-ink">copiar el texto completo</strong>:
+                </p>
+                <pre id="compiledReportBox" class="bg-editorial-paper border border-editorial-border p-4 font-mono text-[11px] sm:text-xs text-editorial-ink whitespace-pre-wrap leading-relaxed max-h-72 overflow-y-auto"></pre>
+            </div>
+
+            <div class="px-6 py-4 bg-editorial-paper border-t border-editorial-border flex flex-col sm:flex-row gap-2.5 justify-end">
+                <button type="button" id="copyReportBtn" class="px-4 py-3 border border-editorial-ink bg-editorial-surface hover:bg-editorial-stone font-mono text-xs uppercase font-semibold text-editorial-ink transition">
+                    Copiar Texto Completo
+                </button>
+                <a id="whatsappDirectBtn" href="https://wa.me/524772317941" target="_blank" rel="noopener noreferrer" class="px-5 py-3 bg-editorial-forest hover:bg-editorial-ink text-white font-mono text-xs uppercase font-semibold tracking-wider text-center transition">
+                    Enviar por WhatsApp →
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- =====================================================================
+         TOAST NOTIFICADOR NO INTRUSIVO (REEMPLAZA alert())
+    ====================================================================== -->
+    <div id="editorialToast" class="fixed top-16 right-4 z-50 max-w-xs bg-editorial-ink text-editorial-surface border-l-4 border-editorial-vermilion px-4 py-3 shadow-xl transform translate-x-[130%] transition-transform duration-300 font-mono text-xs">
+        <span id="editorialToastText">Mensaje</span>
+    </div>
+
+    <!-- =====================================================================
+         MOTOR INTERACTIVO EN MEMORIA (SIN localStorage, SIN alert())
+    ====================================================================== -->
+    <script>
+        (function() {
+            'use strict';
+
+            // Número de WhatsApp receptor oficial (Zenith Code: +52 477 231 7941)
+            const RECIPIENT_WHATSAPP = '524772317941';
+            let activeTargetModule = '01';
+            let customQuestionCounter = 26;
+            let essentialOnlyMode = false;
+
+            // Sanitización de texto para evitar inyección HTML
+            function cleanString(str) {
+                if (typeof str !== 'string') return '';
+                return str.replace(/[<>]/g, '').trim();
+            }
+
+            // Toast no intrusivo
+            let toastTimeout = null;
+            function notify(msg) {
+                try {
+                    const el = document.getElementById('editorialToast');
+                    const txt = document.getElementById('editorialToastText');
+                    if (!el || !txt) return;
+                    txt.textContent = msg;
+                    el.classList.remove('translate-x-[130%]');
+                    el.classList.add('translate-x-0');
+                    clearTimeout(toastTimeout);
+                    toastTimeout = setTimeout(() => {
+                        el.classList.remove('translate-x-0');
+                        el.classList.add('translate-x-[130%]');
+                    }, 3200);
+                } catch (e) {
+                    console.error('[Notify Error]:', e);
+                }
+            }
+
+            // Actualiza contadores de preguntas activas vs respondidas
+            function recalculateMetrics() {
+                try {
+                    const cards = Array.from(document.querySelectorAll('.question-card')).filter(card => {
+                        return card.style.display !== 'none';
+                    });
+
+                    let activeTotal = 0;
+                    let answeredTotal = 0;
+
+                    cards.forEach(card => {
+                        const isSkipped = card.getAttribute('data-skipped') === 'true';
+                        if (isSkipped) return;
+
+                        activeTotal++;
+                        const qtype = card.getAttribute('data-qtype');
+                        let hasAnswer = false;
+
+                        if (qtype === 'sliders') {
+                            hasAnswer = true;
+                        } else if (qtype === 'single-custom' || qtype === 'multi-custom' || qtype === 'tags-builder') {
+                            const selected = card.querySelectorAll('.option-chip[data-selected="true"]').length;
+                            const extra = card.querySelector('.custom-extra-input')?.value.trim();
+                            if (selected > 0 || (extra && extra.length > 0)) hasAnswer = true;
+                        } else {
+                            const field = card.querySelector('input, textarea');
+                            if (field && field.value.trim().length > 0) hasAnswer = true;
+                        }
+
+                        if (hasAnswer) answeredTotal++;
+                    });
+
+                    document.getElementById('activeCounter').textContent = activeTotal;
+                    document.getElementById('answeredCounter').textContent = answeredTotal;
+                    const pct = activeTotal > 0 ? Math.round((answeredTotal / activeTotal) * 100) : 0;
+                    document.getElementById('topProgressBar').style.width = `${pct}%`;
+                } catch (e) {
+                    console.error('[Metrics Error]:', e);
+                }
+            }
+
+            // Inicializa chips interactivos y botones de omitir en una tarjeta
+            function bindCardInteractions(card) {
+                const qtype = card.getAttribute('data-qtype');
+                const chips = card.querySelectorAll('.option-chip');
+
+                chips.forEach(chip => {
+                    chip.addEventListener('click', () => {
+                        if (qtype === 'single-custom') {
+                            const already = chip.getAttribute('data-selected') === 'true';
+                            chips.forEach(c => c.removeAttribute('data-selected'));
+                            if (!already) chip.setAttribute('data-selected', 'true');
+                        } else {
+                            const isSel = chip.getAttribute('data-selected') === 'true';
+                            if (isSel) {
+                                chip.removeAttribute('data-selected');
+                            } else {
+                                chip.setAttribute('data-selected', 'true');
+                            }
+                        }
+                        recalculateMetrics();
+                    });
+                });
+
+                // Botón de Omitir / Activar punto
+                const skipBtn = card.querySelector('.toggle-skip-btn');
+                if (skipBtn) {
+                    skipBtn.addEventListener('click', () => {
+                        const currentlySkipped = card.getAttribute('data-skipped') === 'true';
+                        if (currentlySkipped) {
+                            card.removeAttribute('data-skipped');
+                            skipBtn.textContent = 'Omitir punto';
+                            skipBtn.classList.remove('bg-editorial-ink', 'text-editorial-surface');
+                        } else {
+                            card.setAttribute('data-skipped', 'true');
+                            skipBtn.textContent = 'Incluir punto';
+                            skipBtn.classList.add('bg-editorial-ink', 'text-editorial-surface');
+                        }
+                        recalculateMetrics();
+                    });
+                }
+
+                // Inputs de texto dentro de la tarjeta
+                card.querySelectorAll('input, textarea').forEach(inp => {
+                    inp.addEventListener('input', recalculateMetrics);
+                });
+
+                // Creador dinámico de etiquetas en Punto 12
+                const addTagBtn = card.querySelector('.add-tag-btn');
+                const customTagInput = card.querySelector('.custom-tag-input');
+                const tagPool = card.querySelector('.tag-pool');
+
+                if (addTagBtn && customTagInput && tagPool) {
+                    const createNewTag = () => {
+                        const val = cleanString(customTagInput.value);
+                        if (!val) return;
+                        const btn = document.createElement('button');
+                        btn.type = 'button';
+                        btn.className = 'option-chip px-3.5 py-2 border border-editorial-border bg-editorial-paper text-xs';
+                        btn.setAttribute('data-value', val);
+                        btn.setAttribute('data-selected', 'true');
+                        btn.textContent = `+ ${val}`;
+                        btn.addEventListener('click', () => {
+                            const sel = btn.getAttribute('data-selected') === 'true';
+                            if (sel) btn.removeAttribute('data-selected');
+                            else btn.setAttribute('data-selected', 'true');
+                            recalculateMetrics();
+                        });
+                        tagPool.appendChild(btn);
+                        customTagInput.value = '';
+                        recalculateMetrics();
+                        notify(`Sección "${val}" añadida.`);
+                    };
+
+                    addTagBtn.addEventListener('click', createNewTag);
+                    customTagInput.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            createNewTag();
+                        }
+                    });
+                }
+            }
+
+            // Inicializa sliders de personalidad
+            function initSliders() {
+                document.querySelectorAll('.editorial-slider').forEach(slider => {
+                    const displayId = slider.getAttribute('data-display');
+                    const displayEl = document.getElementById(displayId);
+                    slider.addEventListener('input', () => {
+                        if (displayEl) displayEl.textContent = `${slider.value}%`;
+                        recalculateMetrics();
+                    });
+                });
+
+                const colorPicker = document.getElementById('customColorPicker');
+                const colorNotes = document.getElementById('colorNotesInput');
+                if (colorPicker && colorNotes) {
+                    colorPicker.addEventListener('input', () => {
+                        const hex = colorPicker.value.toUpperCase();
+                        if (!colorNotes.value.includes(hex)) {
+                            colorNotes.value = `Color elegido: ${hex} ${colorNotes.value}`.trim();
+                        }
+                        recalculateMetrics();
+                    });
+                }
+            }
+
+            // Alternar entre "Ver Todo" y "Modo Esencial"
+            function setFilterMode(onlyEssential) {
+                essentialOnlyMode = onlyEssential;
+                const allBtn = document.getElementById('modeAllBtn');
+                const essBtn = document.getElementById('modeEssentialBtn');
+
+                if (onlyEssential) {
+                    essBtn.classList.add('bg-editorial-ink', 'text-editorial-surface');
+                    essBtn.classList.remove('border-editorial-ink/30');
+                    allBtn.classList.remove('bg-editorial-ink', 'text-editorial-surface');
+                    allBtn.classList.add('border-editorial-ink/30');
+                } else {
+                    allBtn.classList.add('bg-editorial-ink', 'text-editorial-surface');
+                    allBtn.classList.remove('border-editorial-ink/30');
+                    essBtn.classList.remove('bg-editorial-ink', 'text-editorial-surface');
+                    essBtn.classList.add('border-editorial-ink/30');
+                }
+
+                document.querySelectorAll('.question-card').forEach(card => {
+                    const isEss = card.getAttribute('data-essential') === 'true';
+                    if (onlyEssential && !isEss) {
+                        card.style.display = 'none';
+                    } else {
+                        card.style.display = 'block';
+                    }
+                });
+
+                recalculateMetrics();
+                notify(onlyEssential ? 'Mostrando solo los puntos esenciales.' : 'Mostrando el brief completo.');
+            }
+
+            // Crea e inyecta una pregunta personalizada creada por Samantha
+            function appendCustomQuestionCard(moduleNum, title, answer) {
+                customQuestionCounter++;
+                const qid = String(customQuestionCounter).padStart(2, '0');
+                const container = document.querySelector(`.module-questions[data-module="${moduleNum}"]`);
+                if (!container) return;
+
+                const article = document.createElement('article');
+                article.className = 'question-card bg-editorial-surface border-2 border-editorial-vermilion/60 p-5 sm:p-7';
+                article.setAttribute('data-qid', qid);
+                article.setAttribute('data-essential', 'true');
+                article.setAttribute('data-qtype', 'textarea');
+                article.setAttribute('data-qtitle', `[Agregado por ti] ${title}`);
+
+                article.innerHTML = `
+                    <div class="flex items-start justify-between gap-4 mb-3">
+                        <span class="font-mono text-xs font-semibold text-editorial-vermilion">[${qid}] · PUNTO PROPIO</span>
+                        <button type="button" class="toggle-skip-btn font-mono text-xs uppercase px-3 py-2.5 min-h-[44px] inline-flex items-center border border-editorial-border hover:border-editorial-ink text-editorial-muted hover:text-editorial-ink transition">Omitir punto</button>
+                    </div>
+                    <div class="question-body">
+                        <label class="block text-base sm:text-lg font-bold text-editorial-ink mb-2">${cleanString(title)}</label>
+                        <textarea rows="3" class="arch-input w-full px-4 py-3 text-sm" placeholder="Escribe tu respuesta...">${cleanString(answer)}</textarea>
+                    </div>
+                `;
+
+                container.appendChild(article);
+                bindCardInteractions(article);
+                recalculateMetrics();
+                notify('Bloque personalizado añadido al brief.');
+            }
+
+            // Compila el reporte limpio solo con puntos activos y respondidos
+            function buildCompiledBrief() {
+                const out = [];
+                out.push('BRIEF DE ARQUITECTURA WEB — SAMANTHA × ZENITH CODE');
+                out.push('==================================================');
+
+                const cards = Array.from(document.querySelectorAll('.question-card'));
+                let includedCount = 0;
+
+                cards.forEach(card => {
+                    if (card.style.display === 'none') return;
+                    if (card.getAttribute('data-skipped') === 'true') return;
+
+                    const qid = card.getAttribute('data-qid');
+                    const qtitle = card.getAttribute('data-qtitle');
+                    const qtype = card.getAttribute('data-qtype');
+                    let valueText = '';
+
+                    if (qtype === 'sliders') {
+                        const sliderParts = [];
+                        card.querySelectorAll('.editorial-slider').forEach(sl => {
+                            const name = sl.getAttribute('data-slider-name');
+                            sliderParts.push(`${name}: ${sl.value}%`);
+                        });
+                        valueText = sliderParts.join(' | ');
+                    } else if (qtype === 'single-custom' || qtype === 'multi-custom' || qtype === 'tags-builder') {
+                        const picked = Array.from(card.querySelectorAll('.option-chip[data-selected="true"]'))
+                            .map(c => cleanString(c.getAttribute('data-value')));
+                        const extra = cleanString(card.querySelector('.custom-extra-input')?.value || '');
+                        const combined = [];
+                        if (picked.length > 0) combined.push(picked.join(', '));
+                        if (extra) combined.push(`Nota: ${extra}`);
+                        valueText = combined.join(' — ');
+                    } else {
+                        const field = card.querySelector('input, textarea');
+                        valueText = cleanString(field?.value || '');
+                    }
+
+                    if (valueText) {
+                        includedCount++;
+                        out.push(`\n[${qid}] ${qtitle}\n→ ${valueText}`);
+                    }
+                });
+
+                if (includedCount === 0) {
+                    out.push('\n(Aún no has completado ningún punto. Llena o selecciona los que prefieras y vuelve a compilar).');
+                }
+
+                out.push('\n==================================================');
+                out.push('Generado desde el Briefing Interactivo de Zenith Code.');
+                return out.join('\n');
+            }
+
+            // Abre modal de vista previa / envío
+            function openExportModal() {
+                try {
+                    const compiled = buildCompiledBrief();
+                    const box = document.getElementById('compiledReportBox');
+                    const waBtn = document.getElementById('whatsappDirectBtn');
+                    const modal = document.getElementById('summaryExportModal');
+
+                    if (box) box.textContent = compiled;
+                    if (waBtn) {
+                        waBtn.href = `https://wa.me/${RECIPIENT_WHATSAPP}?text=${encodeURIComponent(compiled)}`;
+                    }
+
+                    modal?.classList.remove('hidden');
+                    modal?.classList.add('flex');
+                } catch (e) {
+                    console.error('[Export Error]:', e);
+                    notify('No se pudo compilar el resumen. Intenta de nuevo.');
+                }
+            }
+
+            // Copia segura compatible con iframes (document.execCommand('copy'))
+            function copyCompiledText() {
+                try {
+                    const text = document.getElementById('compiledReportBox')?.textContent || '';
+                    const tempArea = document.createElement('textarea');
+                    tempArea.value = text;
+                    tempArea.style.position = 'fixed';
+                    tempArea.style.left = '-9999px';
+                    document.body.appendChild(tempArea);
+                    tempArea.select();
+                    const ok = document.execCommand('copy');
+                    document.body.removeChild(tempArea);
+
+                    if (ok) {
+                        notify('Brief copiado al portapapeles.');
+                    } else {
+                        notify('Selecciona el texto y cópialo manualmente.');
+                    }
+                } catch (e) {
+                    console.error('[Copy Error]:', e);
+                    notify('Selecciona el texto y cópialo manualmente.');
+                }
+            }
+
+            // ===== Mejoras: progreso por módulo, vista previa y resumen =====
+            const PALETTES = {
+                'Papel Alabastro': { bg: '#F4F1EA', ink: '#121212', accent: '#D9381E' },
+                'Monolito': { bg: '#0E0E0E', ink: '#E6DFD3', accent: '#8E8B82' },
+                'Verde Bosque': { bg: '#182C25', ink: '#F7F4EC', accent: '#B86B43' },
+                'Burdeos': { bg: '#F3E9E4', ink: '#4A0E1A', accent: '#8B1E3F' },
+                'Galería': { bg: '#FFFFFF', ink: '#121212', accent: '#1F4FD1' }
+            };
+
+            function hasAnswerCard(card) {
+                const qtype = card.getAttribute('data-qtype');
+                if (qtype === 'sliders') return true;
+                if (['single-custom', 'multi-custom', 'tags-builder'].includes(qtype)) {
+                    const selected = card.querySelectorAll('.option-chip[data-selected="true"]').length;
+                    const extra = (card.querySelector('.custom-extra-input')?.value || '').trim();
+                    return selected > 0 || extra.length > 0;
+                }
+                const field = card.querySelector('input, textarea');
+                return !!(field && field.value.trim().length > 0);
+            }
+
+            function activeCardsIn(scope) {
+                return Array.from(scope.querySelectorAll('.question-card')).filter(c =>
+                    c.getAttribute('data-skipped') !== 'true' && c.style.display !== 'none');
+            }
+
+            function updateModuleProgress() {
+                document.querySelectorAll('[data-progress-module]').forEach(el => {
+                    const m = el.getAttribute('data-progress-module');
+                    const container = document.querySelector(`.module-questions[data-module="${m}"]`);
+                    if (!container) return;
+                    const act = activeCardsIn(container);
+                    const done = act.filter(hasAnswerCard).length;
+                    el.querySelector('.mp-text').textContent = `${done} / ${act.length} listos`;
+                    el.querySelector('.mp-bar').style.width = act.length ? `${Math.round(done / act.length * 100)}%` : '0%';
+                });
+            }
+
+            function selectedOf(qid) {
+                const c = document.querySelector(`.question-card[data-qid="${qid}"]`);
+                if (!c || c.getAttribute('data-skipped') === 'true') return [];
+                return Array.from(c.querySelectorAll('.option-chip[data-selected="true"]')).map(x => x.getAttribute('data-value'));
+            }
+
+            function answerOf(qid) {
+                const c = document.querySelector(`.question-card[data-qid="${qid}"]`);
+                if (!c || c.getAttribute('data-skipped') === 'true') return '';
+                const extra = (c.querySelector('.custom-extra-input')?.value || '').trim();
+                return [...selectedOf(qid), extra].filter(Boolean).join(', ');
+            }
+
+            function paletteFromSelection() {
+                const sel = selectedOf('08')[0] || '';
+                if (sel.startsWith('Paleta personalizada')) {
+                    const p = document.getElementById('customColorPicker');
+                    return { bg: '#FAF8F3', ink: '#121212', accent: p?.value || '#D9381E', name: 'Color libre' };
+                }
+                for (const k of Object.keys(PALETTES)) {
+                    if (sel.includes(k)) return { ...PALETTES[k], name: k };
+                }
+                return { ...PALETTES['Papel Alabastro'], name: 'Papel Alabastro (base)' };
+            }
+
+            function updatePreview() {
+                const box = document.getElementById('livePreview');
+                if (!box) return;
+                const pal = paletteFromSelection();
+                box.style.background = pal.bg;
+                box.style.color = pal.ink;
+                box.style.setProperty('--pv-accent', pal.accent);
+                document.getElementById('pvPalette').textContent = pal.name;
+
+                document.getElementById('pvBrand').textContent = (document.getElementById('in-02')?.value || '').trim() || 'Tu nombre';
+
+                const t = document.getElementById('pvTitle');
+                t.textContent = (document.getElementById('in-04')?.value || '').trim() || 'Tu titular aparecerá aquí';
+                const sliders = document.querySelectorAll('.editorial-slider');
+                const expr = sliders[0] ? +sliders[0].value : 50;   // minimalista → expresivo
+                const vang = sliders[1] ? +sliders[1].value : 50;   // clásico → vanguardista
+                t.style.fontSize = (36 + expr * 0.4) + 'px';
+                t.style.fontFamily = vang > 50 ? '"Plus Jakarta Sans", system-ui, sans-serif' : '"Instrument Serif", Georgia, serif';
+                t.style.fontWeight = vang > 50 ? '700' : '400';
+                t.style.letterSpacing = vang > 50 ? '-0.03em' : '0';
+                t.style.textTransform = vang > 50 ? 'uppercase' : 'none';
+
+                const btn = document.getElementById('pvBtn');
+                btn.style.background = pal.accent;
+                btn.style.color = pal.bg;
+            }
+
+            function updateSummary() {
+                const set = (id, txt) => {
+                    const el = document.getElementById(id);
+                    if (!el) return;
+                    el.textContent = txt || '— sin definir —';
+                    el.style.opacity = txt ? '1' : '0.5';
+                };
+                set('sum-brand', (document.getElementById('in-02')?.value || '').trim());
+                set('sum-public', answerOf('27'));
+                set('sum-palette', selectedOf('08')[0] ? paletteFromSelection().name : '');
+                set('sum-success', answerOf('29'));
+                set('sum-budget', answerOf('31'));
+                set('sum-sections', answerOf('12'));
+                const all = activeCardsIn(document.getElementById('briefMain'));
+                const done = all.filter(hasAnswerCard).length;
+                const sp = document.getElementById('sum-progress');
+                if (sp) sp.textContent = `${done} de ${all.length} puntos respondidos`;
+            }
+
+            function refreshExtras() {
+                updateModuleProgress();
+                updatePreview();
+                updateSummary();
+            }
+
+            // Envuelve recalculateMetrics para que todo se actualice junto
+            const __baseRecalc = recalculateMetrics;
+            recalculateMetrics = function () {
+                __baseRecalc();
+                refreshExtras();
+            };
+            document.addEventListener('input', refreshExtras);
+            document.addEventListener('click', () => setTimeout(refreshExtras, 0));
+
+            // Inicialización general
+            document.addEventListener('DOMContentLoaded', () => {
+                document.querySelectorAll('.question-card').forEach(bindCardInteractions);
+                initSliders();
+                recalculateMetrics();
+
+                // Modos de visualización
+                document.getElementById('modeAllBtn')?.addEventListener('click', () => setFilterMode(false));
+                document.getElementById('modeEssentialBtn')?.addEventListener('click', () => setFilterMode(true));
+
+                // Modal agregar pregunta libre
+                const customModal = document.getElementById('customQuestionModal');
+                document.querySelectorAll('.add-custom-question-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        activeTargetModule = btn.getAttribute('data-target-module') || '01';
+                        document.getElementById('newQTitle').value = '';
+                        document.getElementById('newQAnswer').value = '';
+                        customModal?.classList.remove('hidden');
+                        customModal?.classList.add('flex');
+                        document.getElementById('newQTitle')?.focus();
+                    });
+                });
+
+                const closeCustomModal = () => {
+                    customModal?.classList.add('hidden');
+                    customModal?.classList.remove('flex');
+                };
+                document.getElementById('closeCustomQModal')?.addEventListener('click', closeCustomModal);
+                document.getElementById('cancelCustomQBtn')?.addEventListener('click', closeCustomModal);
+
+                document.getElementById('confirmCustomQBtn')?.addEventListener('click', () => {
+                    const titleVal = cleanString(document.getElementById('newQTitle')?.value || '');
+                    const ansVal = cleanString(document.getElementById('newQAnswer')?.value || '');
+                    if (!titleVal) {
+                        notify('Escribe al menos el título de tu pregunta o tema.');
+                        return;
+                    }
+                    appendCustomQuestionCard(activeTargetModule, titleVal, ansVal);
+                    closeCustomModal();
+                });
+
+                // Botones de barra inferior
+                document.getElementById('previewBriefBtn')?.addEventListener('click', openExportModal);
+                document.getElementById('sendBriefBtn')?.addEventListener('click', openExportModal);
+                document.getElementById('copyReportBtn')?.addEventListener('click', copyCompiledText);
+
+                document.getElementById('closeExportModalBtn')?.addEventListener('click', () => {
+                    const m = document.getElementById('summaryExportModal');
+                    m?.classList.add('hidden');
+                    m?.classList.remove('flex');
+                });
+
+                // Modal de reinicio limpio
+                const resetModal = document.getElementById('resetConfirmModal');
+                document.getElementById('openResetModalBtn')?.addEventListener('click', () => {
+                    resetModal?.classList.remove('hidden');
+                    resetModal?.classList.add('flex');
+                });
+                document.getElementById('cancelResetBtn')?.addEventListener('click', () => {
+                    resetModal?.classList.add('hidden');
+                    resetModal?.classList.remove('flex');
+                });
+                document.getElementById('confirmResetBtn')?.addEventListener('click', () => {
+                    document.querySelectorAll('input[type="text"], textarea').forEach(el => el.value = '');
+                    document.querySelectorAll('.option-chip').forEach(ch => ch.removeAttribute('data-selected'));
+                    document.querySelectorAll('.editorial-slider').forEach(sl => {
+                        sl.value = 50;
+                        const d = document.getElementById(sl.getAttribute('data-display'));
+                        if (d) d.textContent = '50%';
+                    });
+                    document.querySelectorAll('.question-card').forEach(card => {
+                        card.removeAttribute('data-skipped');
+                        const btn = card.querySelector('.toggle-skip-btn');
+                        if (btn) {
+                            btn.textContent = 'Omitir punto';
+                            btn.classList.remove('bg-editorial-ink', 'text-editorial-surface');
+                        }
+                    });
+                    resetModal?.classList.add('hidden');
+                    resetModal?.classList.remove('flex');
+                    recalculateMetrics();
+                    notify('Formulario reiniciado en blanco.');
+                });
+            });
+        })();
+    </script>
+</body>
+</html>
